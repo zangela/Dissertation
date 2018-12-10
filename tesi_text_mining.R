@@ -224,7 +224,7 @@ dtm <- as.matrix(DocumentTermMatrix(corpus
                                                       removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
 ) 
 library(SnowballC)
-coln=colnames(dtm)
+coln=toString(colnames(dtm))
 coln= wordStem(coln, language = "english")
 coln= wordStem(coln, language = "italian")
 coln= wordStem(coln, language = "spanish")
@@ -251,10 +251,11 @@ colnfin = coln
 #conto il numero di parole diverse in tutti gli oggetti
 for (i in 2:length(coln))
 {
-  if (coln[idx]!=coln[i])
+  if (colnfin[idx]!=coln[i])
   {
     len = len +1
     idx = idx + 1 
+    colnfin[idx]=coln[i]
   }
 }
 #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
