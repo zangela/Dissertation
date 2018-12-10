@@ -346,6 +346,7 @@ colnames(sendomdef)<-senderdom
 
 
 #SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
+#comment
 
 
 #which(colSums(dtm)==0) non ci sono colonne tutte di 0
