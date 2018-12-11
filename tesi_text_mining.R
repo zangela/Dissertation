@@ -1,12 +1,20 @@
 
 rm(list=ls())
 
-#----------------------------------CARICAMENTO DATI-------------------------------------------
-dati<-read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
-#summary(dati)
+##################################################################
+#
+#
+#
+#
+#                   CARICAMENTO e SISTEMAZIONE DATI
+#
+#
+#
+#
+# ##################################################################
 
-#----------------------------------SISTEMAZIONE DATASET-------------------------------------------
-column=ncol(dati)+7 #5
+dati<-read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
+column=ncol(dati)+7 
 datidef = matrix(0,nrow=nrow(dati), ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
 colnames(datidef)<-c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation","Spiegazione", "Sbloccata")
 
@@ -31,13 +39,13 @@ for (i in 1:nrow(dati))
       if ((as.numeric(datidef[i,index]) < 18)&&(as.numeric(datidef[i,index]) >7))
       {
         index = index+1
-        datidef[i,index]=1
+        datidef[i,index]=1 #fascia notturna
         index = index+1
       }
       else
       {
         index = index+1
-        datidef[i,index]=0
+        datidef[i,index]=0 #fascia lavorativa
         index = index+1
       }
     }
@@ -88,30 +96,41 @@ for (i in 1:nrow(datidef))
   rn[i]=i
 }
 rownames(datidef)<-rn
-#creare un ciclo per raggruppare in fasce orarie le ore 
-#una volta reso "ore" numerico
+
+#TO DO: reinserire ciclo crea interno/esterno a seconda del dominio del mittente
+
+
+##################################################################
+#
+#
+#
+#
+#                           ANALISI DESCRITTIVE
+#
+#
+#
+#
+##################################################################
 
 
 
-#----------------------------------ANALISI DESCRITTIVE-------------------------------------------------
-#ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
-
-freqass_y<-table(datidef[,6]) #calcolo freq assolute
-freqrel<-as.numeric(freqass_y/sum(freqass_y)) #calcolo freq relative
+#1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
+freqass_y<-table(datidef[,6])                               #calcolo freq assolute
+freqrel<-as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
 barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione tipologie di email",
         ylim=(0:1), col=2:4)
 
-#ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI)
 
-freqass_in<-table(datidef[,11]) #calcolo freq assolute
-barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
-        ylim=(0:1), col=3:4)
+#2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) ->NON VA PERCHE' TOLTO DAL CICLO QUESTA CONDIZIONE
+#freqass_in<-table(datidef[,11]) #calcolo freq assolute
+#barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
+#        ylim=(0:1), col=3:4)
 
-#ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
+
+#3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
 #devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
-
-#calcoliamo quanto email in quarantena ci sono e lo salviamo n num_quarantene ????????????
+#calcoliamo quanto email in quarantena ci sono e lo salviamo n num_quarantene 
 conteggio=table(datidef[,5])
 num_quarantene<-conteggio[[2]]
 
@@ -123,23 +142,89 @@ for (i in 1:nrow(datidef))
     freqass_sb = freqass_sb+1
   }
 }
-freqass_sb=freqass_sb/num_quarantene
-#ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
+freqass_sb=(freqass_sb/num_quarantene)
+
+#4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
 
 #capire quante email vengono mandate nelle diverse fasce orarie; ->fascia dev'essere un fattore!
+
+freqass_fascia<-table(datidef[,4]) #calcolo freq assolute
+freqrel_fascia<-as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
+
+barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione email per fascia oraria",
+        ylim=(0:1), col=2:3)
+
+#=1 fascia notturna
+#=0fascia lavorativa
+
 #capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono
 
-#ANALISI SULLA DISTRIBUZIONE PER MESE
+#capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
 
+#in "conteggio" abbiamo gi� il tot di email dei tre tipi: ci prendiamo quello che ci interessa
+
+num_passed<-conteggio[[1]]
+num_rejected<-conteggio[[3]]
+
+#Fascia notturna:
+ps0<-0
+rj0<-0
+qr0<-0
+
+ps1<-0
+rj1<-0
+qr1<-0
+
+for (i in 1:nrow(datidef))
+{
+  if (datidef[i,4]=="0") 
+  {
+    if(datidef[i,6]=="0") #passate 
+    {ps0<-ps0+1}
+    if(datidef[i,6]=="1") #rigettate
+    {rj0<-(rj0+1)}
+    if datidef[i,6]=="2") #quarantene
+    {qr0<-qr0+1}
+  }
+  else 
+  {
+    if(datidef[i,6]=="0") #passate 
+    {ps1<-ps1+1}
+    if(datidef[i,6]=="1") #rigettate
+    {rj1<-rj1+1}
+    if datidef[i,6]=="2") #quarantene
+    {qr1<-qr1+1}
+    
+  }
+}
+
+#NON FUNZIONA!!!!!!
+
+
+#5)ANALISI SULLA DISTRIBUZIONE PER MESE
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
+
+freq_mese<-table(datidef[,1])
+barplot(table(datidef[,1])/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese",
+        ylim=(0:1), col=2:5)
+
 #capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi pi� intensi di altri)
+
+#stesso ciclo fatto per fascia oraria!!!!!!!!
+
 
 #vedere se c'� correlazione tra passate e internal
 
+##################################################################
+#
+#
+#                                   TEXT MINING
+#
+#
+#
+##################################################################
 
-#----------------------------------TEXT MINING---------------------------------------------------------
-
-#-----------------------------TEXT MINING SULL'OGGETTO-------------------------------------------------
+#-----------------------------TEXT MINING SULL'OGGETTO
 
 #carico le librerie necessarie
 library(tm)
@@ -152,7 +237,7 @@ library(ggplot2)
 require(tau)
 #preprocessing
 
-## Numero di caratteri per tweet
+## Numero di caratteri per singolo oggetto
 
 nchars= sapply(as.vector(datidef[,12]),nchar) #metto in nchar il numero di caratteri presenti in ciascun oggetto (conta anche gli spazi)
 nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per tweet
@@ -175,13 +260,11 @@ print(grep("EMOTE",datidef[,12]) )
 
 
 # Normalizzazione del testo
-#datidef[,9]=gsub("à","?",datidef[,9])) #dove trovi "…"" ci metti ""
-
 datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
 
 conteggi_caratteri=as.data.frame(attributes(datidef[,12])$counts)
-#problema: il conteggio risulta pari a zero, strano!
+#problema: NON FUNZIONA!
 
 #Alcuni passaggi a mano
 #nota: gi? molte parole std sono state eliminate da nomalizzaTesti (non trov ?, a, il, lo,...)
@@ -189,16 +272,15 @@ datidef[,12]=removeStopwords(datidef[,12], stopwords = c(itastopwords,"re", "rif
 #ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole più frequenti. Per non sballare le statistiche credo sia opportuno toglierle
 
 datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
-#tweets$TEXT <- gsub("( |^)piu( |$)", " più ", tweets$TEXT)
 
-#anali degli n-grammi (vedi codice commentato)
+
+#Anali degli n-grammi (vedi codice commentato)
+
 #ricerca n-grammi più frequenti
 #require(tau)
  
 bigrams <- textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
 sort(bigrams,decreasing=TRUE)[1:20]
-
-#TO DO: grafico di sort
 
 # trigrams <- textcnt(datidef[,9],method="string",n=3L,split="[[:blank:]]")
 # sort(trigrams,decreasing=TRUE)[1:10]
@@ -211,11 +293,9 @@ datidef[,12] <- gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
 
 
 ## Crea Document Term Matrix 
-#(= una riga per tweet, una colonna per ogni parola)
+#(= una riga per oggetto, una colonna per ogni parola)
 corpus <- Corpus(VectorSource(datidef[,12]))
-#data(itastopwords)
-#Elenco di parole aggiuntive caricate con TextWiller
-#senza fare stemming
+
 
 #se facciamo stemming
 dtm <- as.matrix(DocumentTermMatrix(corpus
@@ -361,9 +441,6 @@ colnames(sendomdef)<-senderdom
 #SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
 #comment
 
-
-#which(colSums(dtm)==0) non ci sono colonne tutte di 0
-
 #Avremo una matrice molto sparsa
 #To get the total frequency of words in the whole corpus, we can sum the values in a row, as follows:
 
@@ -379,20 +456,31 @@ head(ord_obj)
 #lo useremo come predittore in futuro
 sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 datidef=cbind(datidef,sent)
-#occhio che facendo così crea una prima colonna (col 0 che non c'entra nulla)
+
 #il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
 
 prop.table(table(datidef[,16],exclude = NULL)) #ci da la proporzione di sent
 barplot(table(datidef[,16]),col=2:4)
 
-#----------------ANALISI GRAFICA: parole piu' frequenti nell'oggetto
+##################################################################
+#
+#
+#
+#
+#                       ANALISI GRAFICA
+#
+#
+#
+#
+##################################################################
+
+#parole piu' frequenti nell'oggetto
 library(ggplot2) 
 wf <- data.frame(word=names(freq_obj), freq=freq_obj)
 p <- ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
 p <- p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
 p <- p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
 p
-#la parola piu' utilizzata e' rif, che appare quando si risponde alle email. Si potrebbe togliere
 
 #Word Cloud
 #Word Cloud is another way of representing the frequency of terms in a document. Here, the size of a word indicates its frequency in the document corpus.
@@ -402,4 +490,25 @@ set.seed(123)
 
 wordcloud(names(freq_obj), freq_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
+
+#sender piu' frequenti 
+freq_send <- colSums(sendomdef)
+
+wf1 <- data.frame(word=names(freq_send), freq=freq_send)
+p1 <- ggplot(subset(wf1, freq>5), aes(word, freq)) 
+p1 <- p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+p1 <- p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+p1
+#la parola piu' utilizzata e' rif, che appare quando si risponde alle email. Si potrebbe togliere
+
+#Word Cloud
+#Word Cloud is another way of representing the frequency of terms in a document. Here, the size of a word indicates its frequency in the document corpus.
+
+#For a Word Cloud for the 50 words that occur most often, use the command given below:
+set.seed(123)
+
+wordcloud(names(freq_send), freq_obj, max.words=500,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+#piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
+
+
 
