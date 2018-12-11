@@ -224,7 +224,7 @@ dtm <- as.matrix(DocumentTermMatrix(corpus
                                                       removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
 ) 
 library(SnowballC)
-coln=toString(colnames(dtm))
+coln=colnames(dtm)
 coln= wordStem(coln, language = "english")
 coln= wordStem(coln, language = "italian")
 coln= wordStem(coln, language = "spanish")
@@ -247,6 +247,15 @@ colnames(dtm)<-coln
 
 len = 0
 idx = 1
+
+#
+#
+#
+# Ordinare la matrice dt2
+#
+#
+#
+coln=sort(coln)
 colnfin = coln
 #conto il numero di parole diverse in tutti gli oggetti
 for (i in 2:length(coln))
@@ -266,17 +275,22 @@ for (i in 1:len)
 {
   word[i]= colnfin[i]
 }
-#creo la matrice finale
-for (i in 1:length(word))
+
+for (j in 1:length(word))
 {
-  for (j in 1:ncol(dtm))
+  for (i in 1:ncol(dtm))
   {
-    if (word[i]==coln[j])
+    if (word[j] == coln[i])
     {
-      objdef[,i]<-objdef[,i]+dtm[,j]
+      for (k in 1:nrow(dtm))
+      {
+        objdef[k,j]=objdef[k,j]+dtm[k,i]
+      }
     }
   }
 }
+colnames(objdef)<-word
+
 #se avevo più colonne uguali la presenza è stata sommata, devo portare tutti in termini di 0,1
 for (i in 1:nrow(objdef))
 {
@@ -288,8 +302,6 @@ for (i in 1:nrow(objdef))
     }
   }
 }
-colnames(objdef)<-word
-
 
 #OBJDEF MATRICE CON VALORI DI PRESENZA PER L'OGGETTO
 
