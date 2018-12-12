@@ -163,42 +163,54 @@ barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main=
 
 #in "conteggio" abbiamo già il tot di email dei tre tipi: ci prendiamo quello che ci interessa
 
+##################################################################
+#
+#
+#
+#
+#Conteggio mail per tipo in base alla fascia oraria
+#
+#
+#
+#
+##################################################################
+
 num_passed<-conteggio[[1]]
 num_rejected<-conteggio[[3]]
 
 #Fascia notturna:
-ps0<-0
-rj0<-0
-qr0<-0
+ps0=0
+rj0=0
+qr0=0
 
-ps1<-0
-rj1<-0
-qr1<-0
+ps1=0
+rj1=0
+qr1=0
 
 for (i in 1:nrow(datidef))
 {
-  if (datidef[i,4]=="0") 
+  if (as.numeric(datidef[i,4])==0) 
   {
-    if(datidef[i,6]=="0") #passate 
-    {ps0<-ps0+1}
-    if(datidef[i,6]=="1") #rigettate
-    {rj0<-(rj0+1)}
-    if datidef[i,6]=="2") #quarantene
-    {qr0<-qr0+1}
+    if(as.numeric(datidef[i,6])==0) #passate 
+      ps0=ps0+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rj0=rj0+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qr0=qr0+1
   }
   else 
   {
-    if(datidef[i,6]=="0") #passate 
-    {ps1<-ps1+1}
-    if(datidef[i,6]=="1") #rigettate
-    {rj1<-rj1+1}
-    if datidef[i,6]=="2") #quarantene
-    {qr1<-qr1+1}
-    
+    if(as.numeric(datidef[i,6])==0) #passate 
+      ps1=ps1+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rj1=rj1+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qr1=qr1+1
   }
 }
 
-#NON FUNZIONA!!!!!!
+
+
 
 
 #5)ANALISI SULLA DISTRIBUZIONE PER MESE
