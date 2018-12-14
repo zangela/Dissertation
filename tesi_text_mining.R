@@ -113,22 +113,29 @@ rownames(datidef)<-rn
 ##################################################################
 
 
-
+##################################################################
 #1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
+##################################################################
+
 freqass_y<-table(datidef[,6])                               #calcolo freq assolute
 freqrel<-as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
 barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione tipologie di email",
         ylim=(0:1), col=2:4)
 
-
+##################################################################
 #2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) ->NON VA PERCHE' TOLTO DAL CICLO QUESTA CONDIZIONE
+##################################################################
+
 #freqass_in<-table(datidef[,11]) #calcolo freq assolute
 #barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
 #        ylim=(0:1), col=3:4)
 
 
+##################################################################
 #3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
+##################################################################
+
 #devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
 #calcoliamo quanto email in quarantena ci sono e lo salviamo n num_quarantene 
 conteggio=table(datidef[,5])
@@ -144,7 +151,9 @@ for (i in 1:nrow(datidef))
 }
 freqass_sb=(freqass_sb/num_quarantene)
 
+##################################################################
 #4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
+##################################################################
 
 #capire quante email vengono mandate nelle diverse fasce orarie; ->fascia dev'essere un fattore!
 
@@ -154,31 +163,16 @@ freqrel_fascia<-as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq rel
 barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione email per fascia oraria",
         ylim=(0:1), col=2:3)
 
-#=1 fascia notturna
-#=0fascia lavorativa
+#=0 fascia notturna
+#=1fascia lavorativa
 
-#capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono
-
-#capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
-
+#capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono-> capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
 #in "conteggio" abbiamo già il tot di email dei tre tipi: ci prendiamo quello che ci interessa
-
-##################################################################
-#
-#
-#
-#
-#Conteggio mail per tipo in base alla fascia oraria
-#
-#
-#
-#
-##################################################################
 
 num_passed<-conteggio[[1]]
 num_rejected<-conteggio[[3]]
 
-#Fascia notturna:
+
 ps0=0
 rj0=0
 qr0=0
@@ -189,7 +183,7 @@ qr1=0
 
 for (i in 1:nrow(datidef))
 {
-  if (as.numeric(datidef[i,4])==0) 
+  if (as.numeric(datidef[i,4])==0)  #Fascia notturna:
   {
     if(as.numeric(datidef[i,6])==0) #passate 
       ps0=ps0+1
@@ -198,7 +192,7 @@ for (i in 1:nrow(datidef))
     if (as.numeric(datidef[i,6])==2) #quarantene
       qr0=qr0+1
   }
-  else 
+  else #Fascia lavorativa:
   {
     if(as.numeric(datidef[i,6])==0) #passate 
       ps1=ps1+1
@@ -210,20 +204,152 @@ for (i in 1:nrow(datidef))
 }
 
 
+par(mfrow=c(1,2))
+
+#Fascia notturna:
+tot_lav=(ps0+rj0+qr0)
+ps0_rel<-ps0/tot_lav
+qr0_rel<-qr0/tot_lav
+rj0_rel<-rj0/tot_lav
+
+fascia_lav<-cbind(ps0_rel,rj0_rel,qr0_rel)
+colnames(fascia_lav)<-c('pass','rige','quar')
+barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
 
 
+#Fascia lavorativa:
+tot_lav1=(ps1+rj1+qr1)
+ps1_rel<-ps1/tot_lav1
+qr1_rel<-qr1/tot_lav1
+rj1_rel<-rj1/tot_lav1
 
+fascia_lav1<-cbind(ps1_rel,rj1_rel,qr1_rel)
+colnames(fascia_lav1)<-c('pass','rige','quar')
+barplot(fascia_lav1, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
+
+##################################################################
 #5)ANALISI SULLA DISTRIBUZIONE PER MESE
+##################################################################
+
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
 
 freq_mese<-table(datidef[,1])
-barplot(table(datidef[,1])/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese",
-        ylim=(0:1), col=2:5)
+barplot(table(datidef[,1])/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5)
+#CAPIRE PERCHE' NON RIESCO AD ORDINARE PER  MESE
 
 #capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi più intensi di altri)
 
-#stesso ciclo fatto per fascia oraria!!!!!!!!
+cont=table(datidef[,1])
+num_ago<-cont[[3]]
+num_sett<-cont[[4]]
+num_ott<-cont[[1]]
+num_nov<-cont[[2]]
 
+psa=0
+rja=0
+qra=0
+
+pss=0
+rjs=0
+qrs=0
+
+pso=0
+rjo=0
+qro=0
+
+psn=0
+rjn=0
+qrn=0
+
+
+for (i in 1:nrow(datidef))
+{
+  if (as.numeric(datidef[i,1])==8)  #Agosto:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      psa=psa+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rja=rja+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qra=qra+1
+  }
+  if (as.numeric(datidef[i,1])==9)  #Settembre:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      pss=pss+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rjs=rjs+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qrs=qrs+1
+  }
+  if (as.numeric(datidef[i,1])==10)  #Ottobre:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      pso=pso+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rjo=rjo+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qro=qro+1
+  }
+  else #Novembre:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      psn=psn+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      rjn=rjn+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qrn=qrn+1
+  }
+  
+}
+
+#NON FUNZIONA NA MAZZA!!!
+
+#Agosto:
+tot_ago=(psa+rja+qra)
+psa_rel<-psa/tot_ago
+qra_rel<-qra/tot_ago
+rja_rel<-rja/tot_ago
+
+agosto<-cbind(psa_rel,rja_rel,qra_rel)
+colnames(Agosto)<-c('pass','rige','quar')
+
+#Settembre:
+tot_set=(pss+rjs+qrs)
+pss_rel<-pss/tot_set
+qrs_rel<-qrs/tot_set
+rjs_rel<-rjs/tot_set
+
+settembre<-cbind(pss_rel,rjs_rel,qrs_rel)
+colnames(settembre)<-c('pass','rige','quar')
+
+#Ottobre:
+tot_ott=(pso+rjo+qro)
+pso_rel<-pso/tot_ott
+qro_rel<-qro/tot_ott
+rjo_rel<-rjo/tot_ott
+
+ottobre<-cbind(pso_rel,rjo_rel,qro_rel)
+colnames(ottobre)<-c('pass','rige','quar')
+
+
+#Novembre:
+tot_nov=(psn+rjn+qrn)
+psn_rel<-psn/tot_nov
+qrn_rel<-qrn/totnov
+rjn_rel<-rjn/tot_nov
+
+novembre<-cbind(psn_rel,rjn_rel,qrn_rel)
+colnames(novembre)<-c('pass','rige','quar')
+
+par(mfrow=c(2,2))
+
+barplot(Agosto, ylab="Frequenze relative", main="Distr Agosto",ylim=(0:1), col=2:4)
+barplot(settembre, ylab="Frequenze relative", main="Distr Settembre",ylim=(0:1), col=2:4)
+barplot(ottobre, ylab="Frequenze relative", main="Distr Ottobre",ylim=(0:1), col=2:4)
+barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), col=2:4)
+
+#PROVARLO!!!!
 
 #vedere se c'è correlazione tra passate e internal
 
