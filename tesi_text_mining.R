@@ -13,10 +13,10 @@ rm(list=ls())
 #
 # ##################################################################
 
-dati<-read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
+dati=read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
 column=ncol(dati)+7 
 datidef = matrix(0,nrow=nrow(dati), ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
-colnames(datidef)<-c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation","Spiegazione", "Sbloccata")
+colnames(datidef)=c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation","Spiegazione", "Sbloccata")
 
 for (i in 1:nrow(dati))
 {
@@ -26,10 +26,10 @@ for (i in 1:nrow(dati))
     if(j==1) #data e ora
     {
       object = dati[i,j]
-      tmp<-strsplit(toString(object), "-")
+      tmp=strsplit(toString(object), "-")
       
-      foo <-strsplit(toString(tmp[[1]][1]), ":")
-      foo1 <-strsplit(toString(tmp[[1]][2]), ":")
+      foo =strsplit(toString(tmp[[1]][1]), ":")
+      foo1 =strsplit(toString(tmp[[1]][2]), ":")
       datidef[i,index]=as.double(foo[[1]][2])
       index = index+1
       datidef[i,index]=as.double(foo[[1]][3])
@@ -77,7 +77,7 @@ for (i in 1:nrow(dati))
     else if((j==3)|(j==4)) #sender
     {
       object = dati[i,j]
-      tmp<-strsplit(toString(object), "@")
+      tmp=strsplit(toString(object), "@")
       datidef[i,index]=tmp[[1]][1]
       index=index+1
       datidef[i,index]=tmp[[1]][2]
@@ -94,10 +94,13 @@ rn = rep(0,nrow(datidef))
 for (i in 1:nrow(datidef))
 {
   rn[i]=i
+  if (datidef[i,8]=="steelco.veniceplaza.net"|datidef[i,8]=="steelcogroup.com"|datidef[i,8]=="steelcoservice.com"|datidef[i,8]=="steelcospa.com")
+  {
+    datidef[i,11] = 1
+  }
+  
 }
-rownames(datidef)<-rn
-
-#TO DO: reinserire ciclo crea interno/esterno a seconda del dominio del mittente
+rownames(datidef)=rn
 
 
 ##################################################################
@@ -117,29 +120,31 @@ rownames(datidef)<-rn
 #1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
 ##################################################################
 
-freqass_y<-table(datidef[,6])                               #calcolo freq assolute
-freqrel<-as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
+freqass_y=table(datidef[,6])                               #calcolo freq assolute
+freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
-barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione tipologie di email",
+barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
         ylim=(0:1), col=2:4)
 
 ##################################################################
 #2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) ->NON VA PERCHE' TOLTO DAL CICLO QUESTA CONDIZIONE
 ##################################################################
 
-#freqass_in<-table(datidef[,11]) #calcolo freq assolute
-#barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
-#        ylim=(0:1), col=3:4)
+freqass_in=table(datidef[,11]) #calcolo freq assolute
+barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
+        ylim=(0:1), col=3:4)
 
+#0->estermi
+#1->interni
 
 ##################################################################
 #3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
 ##################################################################
 
 #devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
-#calcoliamo quanto email in quarantena ci sono e lo salviamo n num_quarantene 
+#calcoliamo quanto email in quarantena ci sono e lo salviamo in num_quarantene 
 conteggio=table(datidef[,5])
-num_quarantene<-conteggio[[2]]
+num_quarantene=conteggio[[2]]
 
 freqass_sb=0
 for (i in 1:nrow(datidef))
@@ -150,15 +155,15 @@ for (i in 1:nrow(datidef))
   }
 }
 freqass_sb=(freqass_sb/num_quarantene)
+freqass_sb      #->sarebbe l'errore commesso da parte del Firewall
 
 ##################################################################
 #4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
 ##################################################################
 
-#capire quante email vengono mandate nelle diverse fasce orarie; ->fascia dev'essere un fattore!
-
-freqass_fascia<-table(datidef[,4]) #calcolo freq assolute
-freqrel_fascia<-as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
+#capire quante email vengono mandate nelle diverse fasce orarie; 
+freqass_fascia=table(datidef[,4]) #calcolo freq assolute
+freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
 
 barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione email per fascia oraria",
         ylim=(0:1), col=2:3)
@@ -169,9 +174,8 @@ barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main=
 #capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono-> capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
 #in "conteggio" abbiamo già il tot di email dei tre tipi: ci prendiamo quello che ci interessa
 
-num_passed<-conteggio[[1]]
-num_rejected<-conteggio[[3]]
-
+num_passed=conteggio[[1]]
+num_rejected=conteggio[[3]]
 
 ps0=0
 rj0=0
@@ -207,43 +211,61 @@ for (i in 1:nrow(datidef))
 par(mfrow=c(1,2))
 
 #Fascia notturna:
-tot_lav=(ps0+rj0+qr0)
-ps0_rel<-ps0/tot_lav
-qr0_rel<-qr0/tot_lav
-rj0_rel<-rj0/tot_lav
+tot_not=(ps0+rj0+qr0)
+ps0_rel=ps0/tot_not
+qr0_rel=qr0/tot_not
+rj0_rel=rj0/tot_not
 
-fascia_lav<-cbind(ps0_rel,rj0_rel,qr0_rel)
-colnames(fascia_lav)<-c('pass','rige','quar')
-barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
+fascia_not=cbind(ps0_rel,rj0_rel,qr0_rel)
+colnames(fascia_not)=c('pass','rige','quar')
+barplot(fascia_not, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
 
 
 #Fascia lavorativa:
-tot_lav1=(ps1+rj1+qr1)
-ps1_rel<-ps1/tot_lav1
-qr1_rel<-qr1/tot_lav1
-rj1_rel<-rj1/tot_lav1
+tot_lav=(ps1+rj1+qr1)
+ps1_rel=ps1/tot_lav
+qr1_rel=qr1/tot_lav
+rj1_rel=rj1/tot_lav
 
-fascia_lav1<-cbind(ps1_rel,rj1_rel,qr1_rel)
-colnames(fascia_lav1)<-c('pass','rige','quar')
-barplot(fascia_lav1, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
+fascia_lav=cbind(ps1_rel,rj1_rel,qr1_rel)
+colnames(fascia_lav)=c('pass','rige','quar')
+barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
+
 
 ##################################################################
 #5)ANALISI SULLA DISTRIBUZIONE PER MESE
 ##################################################################
 
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
+freq_mese=table(datidef[,1])
+k = sort(as.numeric(names(freq_mese)))
+f = matrix(0, nrow=1, ncol=length(freq_mese))
+names =as.numeric(names(freq_mese))
+idx =1
+for (idx in 1:ncol(f))
+  
+{
+  for (i in 1:length(freq_mese))
+  {
+    if (k[idx]==names[i])
+    {
+      
+      f[1,idx]= as.numeric(freq_mese[i])
+      i = length(freq_mese)+1
+    }
+  }
+}
+colnames(f)=k
 
-freq_mese<-table(datidef[,1])
-barplot(table(datidef[,1])/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5)
-#CAPIRE PERCHE' NON RIESCO AD ORDINARE PER  MESE
+barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5)
+
 
 #capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi più intensi di altri)
 
-cont=table(datidef[,1])
-num_ago<-cont[[3]]
-num_sett<-cont[[4]]
-num_ott<-cont[[1]]
-num_nov<-cont[[2]]
+num_ago=f[[1]]
+num_sett=f[[2]]
+num_ott=f[[3]]
+num_nov=f[[4]]
 
 psa=0
 rja=0
@@ -273,7 +295,7 @@ for (i in 1:nrow(datidef))
     if (as.numeric(datidef[i,6])==2) #quarantene
       qra=qra+1
   }
-  if (as.numeric(datidef[i,1])==9)  #Settembre:
+  else if (as.numeric(datidef[i,1])==9)  #Settembre:
   {
     if(as.numeric(datidef[i,6])==0) #passate 
       pss=pss+1
@@ -282,7 +304,7 @@ for (i in 1:nrow(datidef))
     if (as.numeric(datidef[i,6])==2) #quarantene
       qrs=qrs+1
   }
-  if (as.numeric(datidef[i,1])==10)  #Ottobre:
+  else if (as.numeric(datidef[i,1])==10)  #Ottobre:
   {
     if(as.numeric(datidef[i,6])==0) #passate 
       pso=pso+1
@@ -303,55 +325,71 @@ for (i in 1:nrow(datidef))
   
 }
 
-#NON FUNZIONA NA MAZZA!!!
 
 #Agosto:
-tot_ago=(psa+rja+qra)
-psa_rel<-psa/tot_ago
-qra_rel<-qra/tot_ago
-rja_rel<-rja/tot_ago
+psa_rel=psa/num_ago
+qra_rel=qra/num_ago
+rja_rel=rja/num_ago
 
-agosto<-cbind(psa_rel,rja_rel,qra_rel)
-colnames(Agosto)<-c('pass','rige','quar')
+agosto=cbind(psa_rel,rja_rel,qra_rel)
+colnames(agosto)=c('pass','rige','quar')
 
 #Settembre:
-tot_set=(pss+rjs+qrs)
-pss_rel<-pss/tot_set
-qrs_rel<-qrs/tot_set
-rjs_rel<-rjs/tot_set
+pss_rel=pss/num_sett
+qrs_rel=qrs/num_sett
+rjs_rel=rjs/num_sett
 
-settembre<-cbind(pss_rel,rjs_rel,qrs_rel)
-colnames(settembre)<-c('pass','rige','quar')
+settembre=cbind(pss_rel,rjs_rel,qrs_rel)
+colnames(settembre)=c('pass','rige','quar')
 
 #Ottobre:
-tot_ott=(pso+rjo+qro)
-pso_rel<-pso/tot_ott
-qro_rel<-qro/tot_ott
-rjo_rel<-rjo/tot_ott
+pso_rel=pso/num_ott
+qro_rel=qro/num_ott
+rjo_rel=rjo/num_ott
 
-ottobre<-cbind(pso_rel,rjo_rel,qro_rel)
-colnames(ottobre)<-c('pass','rige','quar')
+ottobre=cbind(pso_rel,rjo_rel,qro_rel)
+colnames(ottobre)=c('pass','rige','quar')
 
 
 #Novembre:
-tot_nov=(psn+rjn+qrn)
-psn_rel<-psn/tot_nov
-qrn_rel<-qrn/totnov
-rjn_rel<-rjn/tot_nov
+psn_rel=psn/num_nov
+qrn_rel=qrn/num_nov
+rjn_rel=rjn/num_nov
 
-novembre<-cbind(psn_rel,rjn_rel,qrn_rel)
-colnames(novembre)<-c('pass','rige','quar')
+novembre=cbind(psn_rel,rjn_rel,qrn_rel)
+colnames(novembre)=c('pass','rige','quar')
 
 par(mfrow=c(2,2))
 
-barplot(Agosto, ylab="Frequenze relative", main="Distr Agosto",ylim=(0:1), col=2:4)
+barplot(agosto, ylab="Frequenze relative", main="Distr Agosto",ylim=(0:1), col=2:4)
 barplot(settembre, ylab="Frequenze relative", main="Distr Settembre",ylim=(0:1), col=2:4)
 barplot(ottobre, ylab="Frequenze relative", main="Distr Ottobre",ylim=(0:1), col=2:4)
 barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), col=2:4)
 
-#PROVARLO!!!!
 
-#vedere se c'è correlazione tra passate e internal
+##################################################################
+#6)ANALISI SULLA DISTRIBUZIONE DELLE PASSATE
+##################################################################
+
+#vedere la distribuzione delle email passate rispetto ad internal/esternal
+
+int=0
+ext=0
+for (i in 1:nrow(datidef))
+{
+  if (as.numeric(datidef[i,6])==0) #se email passata (tot ne ho 813->corretto)
+  {
+    if(as.numeric(datidef[i,11])==1)  #interne 
+      int=int+1
+    else 
+      ext=ext+1 #esterne 
+  }
+}
+
+int_rel=int/sum(datidef[,6]==0)
+ext_rel=ext/sum(datidef[,6]==0)
+
+barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle email passate",ylim=(0:1), col=2:3)
 
 ##################################################################
 #
@@ -362,8 +400,10 @@ barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), c
 #
 ##################################################################
 
-#-----------------------------TEXT MINING SULL'OGGETTO
 
+##################################################################
+#                         TEXT MINING SULL'OGGETTO
+##################################################################
 #carico le librerie necessarie
 library(tm)
 library(lsa)
@@ -373,19 +413,23 @@ library(devtools) #installarla se necessario
 library (TextWiller)
 library(ggplot2) 
 require(tau)
-#preprocessing
+
+
+##################################################################
+#                         PREPROCESSING
+##################################################################
+
 
 ## Numero di caratteri per singolo oggetto
-
-nchars= sapply(as.vector(datidef[,12]),nchar) #metto in nchar il numero di caratteri presenti in ciascun oggetto (conta anche gli spazi)
-nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per tweet
+nchars= sapply(as.vector(datidef[,12]),nchar) #(conta anche gli spazi)
+nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per oggetto
 
 boxplot(nchars~datidef[,5],col=2:4)
 
 #0=passate
 #1=rigettate
 #2=quarantenat.test(nchars~tweets$soggettivo)
-#sembrerebbe che le 0 abbiano molta pi? variabilit?
+#sembrerebbe che le 0 abbiano molta più variabilità
 #le 1 abbiano una maggior numero di caratteri, ma piu' ripetitivi
 
 
@@ -404,43 +448,48 @@ datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(
 conteggi_caratteri=as.data.frame(attributes(datidef[,12])$counts)
 #problema: NON FUNZIONA!
 
-#Alcuni passaggi a mano
-#nota: gi? molte parole std sono state eliminate da nomalizzaTesti (non trov ?, a, il, lo,...)
+#Eliminare le stopwords
+#nota: molte parole std sono state eliminate da nomalizzaTesti (non trovo, a, il, lo,...)
 datidef[,12]=removeStopwords(datidef[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
 #ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole piÃ¹ frequenti. Per non sballare le statistiche credo sia opportuno toglierle
-
 datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
 
 
-#Anali degli n-grammi (vedi codice commentato)
-
-#ricerca n-grammi piÃ¹ frequenti
+#Analisi degli n-grammi 
 #require(tau)
  
-bigrams <- textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
+bigrams = textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
 sort(bigrams,decreasing=TRUE)[1:20]
 
-# trigrams <- textcnt(datidef[,9],method="string",n=3L,split="[[:blank:]]")
+# trigrams = textcnt(datidef[,9],method="string",n=3L,split="[[:blank:]]")
 # sort(trigrams,decreasing=TRUE)[1:10]
 
 #se voglio creare degli insiemi di parole dati gli n grammi appena trovati
-datidef[,12] <- gsub("assente ufficio", "assente_ufficio", datidef[,12])
-datidef[,12] <- gsub("sessione disconnessa", "sessione_disconnessa", datidef[,12])
-datidef[,12] <- gsub("purchase order", "purchase_order", datidef[,12])
-datidef[,12] <- gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
+datidef[,12] = gsub("assente ufficio", "assente_ufficio", datidef[,12])
+datidef[,12] = gsub("sessione disconnessa", "sessione_disconnessa", datidef[,12])
+datidef[,12] = gsub("purchase order", "purchase_order", datidef[,12])
+datidef[,12] = gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
 
+##################################################################
+#                        CREAZIONE DOCUMENT TERM MATRIX
+##################################################################
 
-## Crea Document Term Matrix 
 #(= una riga per oggetto, una colonna per ogni parola)
-corpus <- Corpus(VectorSource(datidef[,12]))
-
+corpus = Corpus(VectorSource(datidef[,12]))
 
 #se facciamo stemming
-dtm <- as.matrix(DocumentTermMatrix(corpus
+dtm = as.matrix(DocumentTermMatrix(corpus
                                     , control = list( stemming = TRUE, stopwords = itastopwords,
                                                       minWordLength = 2, removeNumbers = TRUE,
                                                       removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
 ) 
+
+#NOTA: in realtà non lo fa!
+
+##################################################################
+#                        STEMMING
+##################################################################
+
 library(SnowballC)
 coln=colnames(dtm)
 coln= wordStem(coln, language = "english")
@@ -449,7 +498,7 @@ coln= wordStem(coln, language = "spanish")
 coln= wordStem(coln, language = "danish")
 coln= wordStem(coln, language = "french")
 coln= wordStem(coln, language = "german")
-colnames(dtm)<-coln
+colnames(dtm)=coln
 
 ##################################################################
 #
@@ -507,7 +556,7 @@ for (j in 1:length(word))
     }
   }
 }
-colnames(objdef)<-word
+colnames(objdef)=word
 
 #se avevo più colonne uguali la presenza è stata sommata, devo portare tutti in termini di 0,1
 for (i in 1:nrow(objdef))
@@ -537,7 +586,7 @@ for (i in 1:nrow(objdef))
 ##################################################################
 #ottengo tutti i dominii
 len = 0
-alldom<-datidef[,8]
+alldom=datidef[,8]
 #dominii in ordine alfabetico
 alldom= sort(alldom)
 #conto e mi salvo tutti i dominii diversi
@@ -554,7 +603,7 @@ for (i in 2:nrow(datidef))
     tmpdom[idx]=toString(alldom[i])
   }
 }
-#creo un vettore che contiene tutti i dominii iversi (serve per colnames) e la matrice sendomdef finale
+#creo un vettore che contiene tutti i dominii Diversi (serve per colnames) e la matrice sendomdef finale
 senderdom= character(len)
 for (i in 1:len)
 {
@@ -573,25 +622,34 @@ for (i in 1:nrow(sendomdef))
     }
   }
 }
-colnames(sendomdef)<-senderdom
+colnames(sendomdef)=senderdom
 
 
 #SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
-#comment
+
+##################################################################
+#                     ANALISI DELLE FREQUENZE
+##################################################################
+
 
 #Avremo una matrice molto sparsa
-#To get the total frequency of words in the whole corpus, we can sum the values in a row, as follows:
 
-freq_obj <- colSums(as.matrix(dtm))
+#per avere la frequenza di ogni singola parola univoca:
+freq_obj = colSums(as.matrix(objdef))
 
-#For that, we have to first transform the DTM into a matrix, and then sum up the rows to give a single value for each column.
 #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
+ord_obj = sort(freq_obj,decreasing=T)
+top_six=(head(ord_obj)/sum(ord_obj))
 
-ord_obj <- sort(freq_obj,decreasing=T)
-head(ord_obj)
 
-# Assegna sentiment ai tw
-#lo useremo come predittore in futuro
+barplot(ord_obj, ylab="Frequenze assolute", main="Parole ppiù frequenti nell'oggetto",ylim=(0:1), col=2:3)
+
+##################################################################
+#                     ASSEGNAZIONE SENTIMENT
+##################################################################
+
+
+#lo useremo come possibile predittore  futuro
 sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 datidef=cbind(datidef,sent)
 
@@ -612,41 +670,39 @@ barplot(table(datidef[,16]),col=2:4)
 #
 ##################################################################
 
-#parole piu' frequenti nell'oggetto
+##################################################################
+#                     FREQUENZA PAROLE NELL'OGGETTO
+##################################################################
+
 library(ggplot2) 
-wf <- data.frame(word=names(freq_obj), freq=freq_obj)
-p <- ggplot(subset(wf, freq>50), aes(word, freq)) #â™£prendiamo quelle con freq>50
-p <- p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-p <- p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+wf = data.frame(word=names(ord_obj), freq=ord_obj)
+p = ggplot(subset(wf, freq>50), aes(word, freq)) #â™£prendiamo quelle con freq>50
+p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
 p
 
 #Word Cloud
-#Word Cloud is another way of representing the frequency of terms in a document. Here, the size of a word indicates its frequency in the document corpus.
-
-#For a Word Cloud for the 50 words that occur most often, use the command given below:
 set.seed(123)
 
-wordcloud(names(freq_obj), freq_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
 
-#sender piu' frequenti 
-freq_send <- colSums(sendomdef)
+##################################################################
+#                     FREQUENZA SENDER
+##################################################################
 
-wf1 <- data.frame(word=names(freq_send), freq=freq_send)
-p1 <- ggplot(subset(wf1, freq>5), aes(word, freq)) 
-p1 <- p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-p1 <- p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+freq_send = colSums(sendomdef)
+
+wf1 = data.frame(word=names(freq_send), freq=freq_send)
+p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
+p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
 p1
-#la parola piu' utilizzata e' rif, che appare quando si risponde alle email. Si potrebbe togliere
 
 #Word Cloud
-#Word Cloud is another way of representing the frequency of terms in a document. Here, the size of a word indicates its frequency in the document corpus.
-
-#For a Word Cloud for the 50 words that occur most often, use the command given below:
 set.seed(123)
+wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 
-wordcloud(names(freq_send), freq_obj, max.words=500,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-#piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
 
 
 
