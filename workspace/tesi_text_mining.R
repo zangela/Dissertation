@@ -15,8 +15,15 @@ rm(list=ls())
 
 dati=read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
 column=ncol(dati)+7 
-datidef = matrix(0,nrow=nrow(dati), ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
+status = table(dati[,2])
+rows = 0
+for (i in 2:length(status))
+{
+  rows = rows + status[i]
+}
+datidef = matrix(0,nrow=rows, ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
 colnames(datidef)=c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation","Spiegazione", "Sbloccata")
+rows = 1
 for (i in 1:nrow(dati))
 {
   print(i)
@@ -32,22 +39,22 @@ for (i in 1:nrow(dati))
         
         foo =strsplit(toString(tmp[[1]][1]), ":")
         foo1 =strsplit(toString(tmp[[1]][2]), ":")
-        datidef[i,index]=as.numeric(foo[[1]][2])
+        datidef[rows,index]=as.numeric(foo[[1]][2])
         index = index+1
-        datidef[i,index]=as.numeric(foo[[1]][3])
+        datidef[rows,index]=as.numeric(foo[[1]][3])
         index = index+1
-        datidef[i,index]=as.numeric(foo1[[1]][1])
+        datidef[rows,index]=as.numeric(foo1[[1]][1])
         
-        if ((as.numeric(datidef[i,index])<18)&(as.numeric(datidef[i,index]) >7))
+        if ((as.numeric(datidef[rows,index])<18)&(as.numeric(datidef[rows,index]) >7))
         {
           index = index+1
-          datidef[i,index]=1 #fascia notturna
+          datidef[rows,index]=1 #fascia notturna
           index = index+1
         }
         else
         {
           index = index+1
-          datidef[i,index]=0 #fascia lavorativa
+          datidef[rows,index]=0 #fascia lavorativa
           index = index+1
         }
       }
@@ -56,23 +63,23 @@ for (i in 1:nrow(dati))
         object = toString(dati[i,j])
         if(object == "email passed")
         {
-          datidef[i,index]=toString(dati[i,j])
+          datidef[rows,index]=toString(dati[i,j])
           index=index+1
-          datidef[i,index]=0
+          datidef[rows,index]=0
           index=index+1
         }
         else if(object == "email rejected")
         {
-          datidef[i,index]=toString(dati[i,j])
+          datidef[rows,index]=toString(dati[i,j])
           index=index+1
-          datidef[i,index]=1
+          datidef[rows,index]=1
           index=index+1
         }
-        else
+        else if(object == "email quarantined")
         {
-          datidef[i,index]=toString(dati[i,j])
+          datidef[rows,index]=toString(dati[i,j])
           index=index+1
-          datidef[i,index]=2
+          datidef[rows,index]=2
           index=index+1
         }
       }
@@ -80,18 +87,19 @@ for (i in 1:nrow(dati))
       {
         object = dati[i,j]
         tmp=strsplit(toString(object), "@")
-        datidef[i,index]=tmp[[1]][1]
+        datidef[rows,index]=tmp[[1]][1]
         index=index+1
-        datidef[i,index]=tmp[[1]][2]
+        datidef[rows,index]=tmp[[1]][2]
         index=index+1
       }
       if((j!=1)&(j!=2)&(j!=3)&(j!=4)) #per tutte le colonne che non devo modificare
       {
-        datidef[i,index+1]=toString(dati[i,j])
+        datidef[rows,index+1]=toString(dati[i,j])
         index=index+1
       }
     }
   }
+  rows=rows+1
 }
 rn = rep(0,nrow(datidef))
 for (i in 1:nrow(datidef))
@@ -320,7 +328,7 @@ barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email p
 num_ago=f[[1]]
 num_sett=f[[2]]
 num_ott=f[[3]]
-72=f[[4]]
+num_nov=f[[4]]
 
 psa=0
 rja=0
