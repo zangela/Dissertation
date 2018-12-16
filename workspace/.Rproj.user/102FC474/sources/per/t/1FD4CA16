@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1544946396875.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "914077772",
+    "id" : "1FD4CA16",
+    "lastKnownWriteTime" : 1544954059,
+    "last_content_update" : 1544954059410,
+    "path" : "C:/Users/Angela/Desktop/Workspace/workspace/tesi_text_mining.R",
+    "project_path" : "tesi_text_mining.R",
+    "properties" : {
+        "cursorPosition" : "317,0",
+        "scrollLine" : "299"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

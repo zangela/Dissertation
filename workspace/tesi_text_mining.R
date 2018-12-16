@@ -124,18 +124,74 @@ freqass_y=table(datidef[,6])                               #calcolo freq assolut
 freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
 barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
-        ylim=(0:1), col=2:4)
+        ylim=(0:1), col=2:4, xlab="Codifica email")
 
 ##################################################################
-#2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) ->NON VA PERCHE' TOLTO DAL CICLO QUESTA CONDIZIONE
+#2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) 
 ##################################################################
 
 freqass_in=table(datidef[,11]) #calcolo freq assolute
 barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
-        ylim=(0:1), col=3:4)
+        ylim=(0:1), col=3:5)
 
 #0->estermi
 #1->interni
+
+stee_p=0
+stee_r=0
+stee_q=0
+
+no_stee_p=0
+no_stee_r=0
+no_stee_q=0
+
+for (i in 1:nrow(datidef))
+{
+  if (as.numeric(datidef[i,11])==1)  #Domini interni:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      stee_p=stee_p+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      stee_r=stee_r+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      stee_q=stee_q+1
+  }
+  else #Domini esterni:
+  {
+    if(as.numeric(datidef[i,6])==0) #passate 
+      no_stee_p=no_stee_p+1
+    if(as.numeric(datidef[i,6])==1) #rigettate
+      no_stee_r=no_stee_r+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      no_stee_q=no_stee_q+1
+  }
+}
+
+
+#Interni:
+tot_int=(stee_p+stee_r+stee_q)
+stee_p_rel=stee_p/tot_int
+stee_q_rel=stee_q/tot_int
+stee_r_rel=stee_r/tot_int
+
+interni=cbind(stee_p_rel,stee_r_rel,stee_q_rel)
+colnames(interni)=c('pass','rige','quar')
+
+#correttamente tutte le email mandate dal dominio interno passano per il Firewall senza essere bloccate->risultato scontao
+
+#Esterni:
+tot_est=(no_stee_p+no_stee_r+no_stee_q)
+no_stee_p_rel=no_stee_p/tot_est
+no_stee_q_rel=no_stee_q/tot_est
+no_stee_r_rel=no_stee_r/tot_est
+
+esterne=cbind(no_stee_p_rel,no_stee_r_rel,no_stee_q_rel)
+colnames(esterne)=c('pass','rige','quar')
+
+par(mfrow=c(1,2))
+barplot(interni, ylab="Frequenze relative", main="Distr per mittenti interni",ylim=(0:1), col=2:4)
+barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",ylim=(0:1), col=2:4)
+
 
 ##################################################################
 #3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
@@ -165,7 +221,7 @@ freqass_sb      #->sarebbe l'errore commesso da parte del Firewall
 freqass_fascia=table(datidef[,4]) #calcolo freq assolute
 freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
 
-barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione email per fascia oraria",
+barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
         ylim=(0:1), col=2:3)
 
 #=0 fascia notturna
@@ -207,9 +263,6 @@ for (i in 1:nrow(datidef))
   }
 }
 
-
-par(mfrow=c(1,2))
-
 #Fascia notturna:
 tot_not=(ps0+rj0+qr0)
 ps0_rel=ps0/tot_not
@@ -218,8 +271,6 @@ rj0_rel=rj0/tot_not
 
 fascia_not=cbind(ps0_rel,rj0_rel,qr0_rel)
 colnames(fascia_not)=c('pass','rige','quar')
-barplot(fascia_not, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
-
 
 #Fascia lavorativa:
 tot_lav=(ps1+rj1+qr1)
@@ -229,6 +280,9 @@ rj1_rel=rj1/tot_lav
 
 fascia_lav=cbind(ps1_rel,rj1_rel,qr1_rel)
 colnames(fascia_lav)=c('pass','rige','quar')
+
+par(mfrow=c(1,2))
+barplot(fascia_not, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
 barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
 
 
@@ -238,6 +292,7 @@ barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",yl
 
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
 freq_mese=table(datidef[,1])
+#ATTENZIONE!!!!C'è IL MESO 0 CHE NON DOVREBBE ESSERCI!!!!!
 k = sort(as.numeric(names(freq_mese)))
 f = matrix(0, nrow=1, ncol=length(freq_mese))
 names =as.numeric(names(freq_mese))
@@ -257,7 +312,7 @@ for (idx in 1:ncol(f))
 }
 colnames(f)=k
 
-barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5)
+barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5, ylim=c(0:1))
 
 
 #capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi pi? intensi di altri)
@@ -265,7 +320,7 @@ barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email p
 num_ago=f[[1]]
 num_sett=f[[2]]
 num_ott=f[[3]]
-num_nov=f[[4]]
+72=f[[4]]
 
 psa=0
 rja=0
