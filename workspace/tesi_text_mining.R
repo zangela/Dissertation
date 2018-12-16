@@ -24,7 +24,7 @@ for (i in 2:length(status))
 datidef = matrix(0,nrow=rows, ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
 colnames(datidef)=c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation","Spiegazione", "Sbloccata")
 rows = 1
-for (i in 1:nrow(dati))
+for (i in 1:nrow(dati)-1)
 {
   print(i)
   index =1
