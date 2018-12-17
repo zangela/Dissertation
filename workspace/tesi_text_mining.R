@@ -91,7 +91,7 @@ for (i in 1:nrow(dati))
   }
 }
 rn = rep(0,nrow(datidef))
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 {
   rn[i]=i
   if ((as.character(datidef[i,8])=="steelco.veniceplaza.net")|(as.character(datidef[i,8])=="steelcogroup.com")|(as.character(datidef[i,8])=="steelcoservice.com")|(as.character(datidef[i,8])=="steelcospa.com"))
@@ -131,7 +131,7 @@ freqass_in=table(datidef[,11]) #calcolo freq assolute
 barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
         ylim=(0:1), col=3:5)
 
-#0->estermi
+#0->esterni
 #1->interni
 
 stee_p=0
@@ -174,7 +174,6 @@ stee_r_rel=stee_r/tot_int
 interni=cbind(stee_p_rel,stee_r_rel,stee_q_rel)
 colnames(interni)=c('pass','rige','quar')
 
-#correttamente tutte le email mandate dal dominio interno passano per il Firewall senza essere bloccate->risultato scontao
 
 #Esterni:
 tot_est=(no_stee_p+no_stee_r+no_stee_q)
@@ -187,6 +186,7 @@ colnames(esterne)=c('pass','rige','quar')
 
 par(mfrow=c(1,2))
 barplot(interni, ylab="Frequenze relative", main="Distr per mittenti interni",ylim=(0:1), col=2:4)
+#correttamente tutte le email mandate dal dominio interno passano per il Firewall senza essere bloccate->risultato scontao
 barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",ylim=(0:1), col=2:4)
 
 
@@ -530,13 +530,15 @@ datidef[,12] = gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
 corpus = Corpus(VectorSource(datidef[,12]))
 
 #se facciamo stemming
+
+#NB: servirebbero 140 g di memoria per lanciare questo comando->dunque così completo non è possibile lanciarlo. Capire come gestirlo.
 dtm = as.matrix(DocumentTermMatrix(corpus
                                     , control = list( stemming = TRUE, stopwords = itastopwords,
                                                       minWordLength = 2, removeNumbers = TRUE,
                                                       removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
 ) 
 
-#NOTA: in realt? non lo fa!
+#NOTA: in realtà non lo fa!
 
 ##################################################################
 #                        STEMMING
