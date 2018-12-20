@@ -685,7 +685,57 @@ length(domain)
 https://data-flair.training/blogs/e1071-in-r/
 
 
+##################################################################  
+  
+#svm tradizionale
 
+model=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
+
+#oss: se cerco di fare cross validation mi da errore e non stima il modello (cross=k) con k>0 par di lisciamento
+summary(model)
+
+pred <- predict(model,objdef)
+system.time(pred <- predict(model,objdef))
+table(as.integer(pred),datidef[,6])
+
+
+#svm tuned
+
+#cerco di lisciare il modello
+tuned_parameters <- tune.svm((datidef[,6]~objdef), data =as.numeric(datidef))
+
+svmTune <- tune(svm, train.x=x, train.y=y, kernel='radial',
+                ranges=list(cost=10^(-5:5), gamma=seq(0, 100, 0.5)),
+                class.weights=c('0'=numZeros/(numZeros+numOnes),
+                                '1'=numOnes/(numZeros+numOnes)))
+
+
+
+#salvo il modello che darò in pasto al successivo set di dati								
+saveRDS(model, file = "C:\\Users\\Angela\\Desktop\\rds\\model.rds") #percorso dove salvarlo.Mantenere la doppia \
+
+#richiamo il modello salvato
+model1=readRDS("C:\\Users\\Angela\\Desktop\\rds\\model.rds")
+
+#cerco di partire dai valori ottenuti in precedenza e migliorarli
+model1=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
+summary(model)
+
+pred <- predict(model,objdef)
+system.time(pred <- predict(model,objdef))
+table(as.integer(pred),datidef[,6])
+  
+
+##################################################################  
+  
+  
+  
+################################################################## 
+
+#CODICE ANCORA DA TESTARE
+
+
+################################################################## 
 svm_data <- function(type, vector, min, max)
 {
   # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
