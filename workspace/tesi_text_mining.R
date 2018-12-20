@@ -522,118 +522,114 @@ datidef[,12] = gsub("sessione disconnessa", "sessione_disconnessa", datidef[,12]
 datidef[,12] = gsub("purchase order", "purchase_order", datidef[,12])
 datidef[,12] = gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
 
-##################################################################
-#                        CREAZIONE DOCUMENT TERM MATRIX
-##################################################################
 
-#(= una riga per oggetto, una colonna per ogni parola)
-corpus = Corpus(VectorSource(datidef[,12]))
 
-#se facciamo stemming
-
-#NB: servirebbero 140 g di memoria per lanciare questo comando->dunque così completo non è possibile lanciarlo. Capire come gestirlo.
-dtm = as.matrix(DocumentTermMatrix(corpus
-                                    , control = list( stemming = TRUE, stopwords = itastopwords,
-                                                      minWordLength = 2, removeNumbers = TRUE,
-                                                      removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
-) 
-
-#NOTA: in realtà non lo fa!
-
-##################################################################
-#                        STEMMING
-##################################################################
-
-library(SnowballC)
-coln=colnames(dtm)
-coln= wordStem(coln, language = "english")
-coln= wordStem(coln, language = "italian")
-coln= wordStem(coln, language = "spanish")
-coln= wordStem(coln, language = "danish")
-coln= wordStem(coln, language = "french")
-coln= wordStem(coln, language = "german")
-colnames(dtm)=coln
 
 ##################################################################
 #
 #
 #
-#
-#creo la matrice finale degli oggetti che conta la presenza delle singole parole stemmate
-#
+#   inizio CREAZIONE DEL DIZIONARIO NEL CASO ALLDEF.CSV
 #
 #
 #
 ##################################################################
+make_dictionary <- function(corpus, tmp) 
+{  
+  dtm = as.matrix(DocumentTermMatrix(corpus
+                                     , control = list( stemming = TRUE, stopwords = itastopwords,
+                                                       minWordLength = 2, removeNumbers = TRUE,
+                                                       removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
+  ) 
+  coln = colnames(dtm)
+  dic = rep("", length(coln)+length(tmp))
+  for (i in 1:length(coln))
+  {
+    dic[i]=coln[i]
+  }
+  k = length(coln)+1
+  if(length(tmp > 0))
+  {
+    for (i in 1:length(tmp))
+    {
+      dic[k]=tmp[i]
+      k = k+1
+    }
+  }
+  return(dic)
+}
 
+n_part = 50
+part = as.integer(nrow(datidef)/n_part)
+tmp = rep("", 0)
+for (i in 1:(n_part+1))
+{
+  if (i <= 50) 
+  {
+    if (i == 1)
+    {
+      corpus = Corpus(VectorSource(datidef[1:part*i,12]))
+      tmp = make_dictionary(corpus,tmp)
+    }
+    else
+    {
+      corpus = Corpus(VectorSource(datidef[(part*(i-1)+1):(part*i),12]))
+      tmp = make_dictionary(corpus,tmp)
+    }
+  }
+  else
+  {
+    if (part*(i-1) < nrow(datidef))
+    {
+      corpus = Corpus(VectorSource(datidef[(part*(i-1)+1):nrow(datidef),12]))
+      dic = make_dictionary(corpus,tmp)
+    }
+  }
+}
+dic= wordStem(dic, language = "english")
+dic= wordStem(dic, language = "italian")
+dic= wordStem(dic, language = "spanish")
+dic= wordStem(dic, language = "danish")
+dic= wordStem(dic, language = "french")
+dic= wordStem(dic, language = "german")
 len = 0
 idx = 1
-
-#
-#
-#
-# Ordinare la matrice dt2
-#
-#
-#
-coln=sort(coln)
-colnfin = coln
+dic=sort(dic)
+colnfin = dic
 #conto il numero di parole diverse in tutti gli oggetti
-for (i in 2:length(coln))
+for (i in 2:length(dic))
 {
-  if (colnfin[idx]!=coln[i])
+  if (colnfin[idx]!=dic[i])
   {
     len = len +1
     idx = idx + 1 
-    colnfin[idx]=coln[i]
+    colnfin[idx]=dic[i]
   }
 }
 #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
-word=character(len)
-objdef = matrix(0,nrow=nrow(dtm),ncol=len)
+dictionary=character(len)
 #inserisco tutte le parole diverse in oarine alfabetico in word
 for (i in 1:len) 
 {
-  word[i]= colnfin[i]
+  dictionary[i]= colnfin[i]
 }
+##################################################################
+#
+#
+#
+#   fine CREAZIONE DEL DIZIONARIO NEL CASO ALLDEF.CSV
+#   presente in ***dictionary***
+#
+#
+##################################################################
 
-for (j in 1:length(word))
-{
-  for (i in 1:ncol(dtm))
-  {
-    if (word[j] == coln[i])
-    {
-      for (k in 1:nrow(dtm))
-      {
-        objdef[k,j]=objdef[k,j]+dtm[k,i]
-      }
-    }
-  }
-}
-colnames(objdef)=word
-
-#se avevo pi? colonne uguali la presenza ? stata sommata, devo portare tutti in termini di 0,1
-for (i in 1:nrow(objdef))
-{
-  for (j in 1:ncol(objdef))
-  {
-    if (objdef[i,j]>1)
-    {
-      objdef[i,j]=1
-    }
-  }
-}
-
-#OBJDEF MATRICE CON VALORI DI PRESENZA PER L'OGGETTO
 
 
 ##################################################################
 #
 #
 #
-#
-#creo la matrice finale dei domini dei sender che conta la presenza dei singoli domini
-#
+#   inizio CREAZIONE DEI DOMINII NEL CASO ALLDEF.CSV
 #
 #
 #
@@ -658,25 +654,319 @@ for (i in 2:nrow(datidef))
   }
 }
 #creo un vettore che contiene tutti i dominii Diversi (serve per colnames) e la matrice sendomdef finale
-senderdom= character(len)
+domain= character(len)
 for (i in 1:len)
 {
-  senderdom[i]=tmpdom[i]
+  domain[i]=tmpdom[i]
 }
-sendomdef = matrix(0, nrow=nrow(datidef), ncol=len)
-#creo la matrice finale
-for (i in 1:nrow(sendomdef))
+length(domain)
+##################################################################
+#
+#
+#
+#   fine CREAZIONE DEI DOMINII NEL CASO ALLDEF.CSV
+#   presente in ***domain***
+#
+#
+##################################################################
+
+
+##################################################################
+#
+#
+#
+#   SVM: TODO 
+#   start
+#
+#
+##################################################################
+
+#LINK UTILE
+https://data-flair.training/blogs/e1071-in-r/
+
+
+
+svm_data <- function(type, vector, min, max)
 {
-  for (j in 1:length(senderdom))
+  # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
+  
+  # la variabile vector contiene il dizionario di parole o di dominii in base al type
+  
+  # min % max è il range di indice di datidef che vengono analizzati 
+  # in una singola esecuzione per il calcolo degli input/output di svm
+  # SEMPLICE: creo objdef e domdef per le righe di datidef che vanno da min a max ;)
+  if (type == 0) # calcolo di objdef
   {
-    if (datidef[i,8]== senderdom[j])
-    {
-      sendomdef[i,j]= 1
-      j = length(senderdom)+1
-    }
+    
+  }
+  else if (type == 1) # calcolo di domdef
+  {
+    
   }
 }
-colnames(sendomdef)=senderdom
+
+# impostare indici del dataset per il trainig
+train_min = #impostare
+train_max = #impostare
+# impostare indici del dataset per la validation
+validation_min = #impostare
+validation_min = #impostare
+# impostare indici del dataset per il test
+test_min = #impostare
+test_min = #impostare
+train = FALSE
+tuning = FALSE
+
+while(train == FALSE)
+{
+  n_part = 50
+  part = as.integer(nrow(datidef)/n_part)
+  tmp = rep("", 0)
+  for (i in 1:(n_part+1))
+  {
+    # calcolare per ogni pezzo la matrice objdef per svm training 
+    objdef = svm_data(0, dictionary, min, max)
+    # calcolare per ogni pezzo la matrice domdef per svm training
+    domdef = svm_data(1, domain, min, max)
+    # allenare svm
+    svm_model <- svm() # impostare
+    train = TRUE
+  }
+  if (tuning == FALSE)
+  {
+    # calcolare per ogni pezzo la matrice objdef per svm validation 
+    objdef = svm_data(0, dictionary, min, max)
+    # calcolare per ogni pezzo la matrice domdef per svm validation
+    domdef = svm_data(1, domain, min, max)
+    # tuning svm
+    tune = tune.svm() #impostare
+    # parse dell'output per ottenere i valori migliori per svm
+    tune=strsplit() #impostare
+    #impostazione dei nuovi valori al modello svm
+    gamma = #impostare
+    cost = #impstare
+    kernel = #impostare
+      # etc.....
+    train = FALSE
+  }
+}
+# calcolare per ogni pezzo la matrice objdef per svm test 
+objdef = svm_data(0, dictionary, min, max)
+# calcolare per ogni pezzo la matrice domdef per svm test
+domdef = svm_data(1, domain, min, max)
+
+# calcolo delle statistiche
+
+
+# Codice from 
+https://www.r-bloggers.com/support-vector-machine-simplified-using-r/
+  
+  
+# Predict Target Label
+valX <-svm.validate[,4:61]
+pred <- predict(svm.tune, valX, type=”prob”)[2]
+
+# Model Performance Statistics
+pred_val <-prediction(pred[,2], svm.validate$Class)
+
+# Calculating Area under Curve
+perf_val <- performance(pred_val,”auc”)
+perf_val
+
+# Calculating True Positive and False Positive Rate
+perf_val <- performance(pred_val, “tpr”, “fpr”)
+
+# Plot the ROC curve
+plot(perf_val, col = “green”, lwd = 1.5)
+
+#Calculating KS statistics
+ks <- max(attr(perf_val, “y.values”)[[1]] – (attr(perf_val, “x.values”)[[1]]))
+ks
+
+
+##################################################################
+#
+#
+#
+#   SVM: TODO 
+#   end
+#
+#
+##################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##################################################################
+#                        CREAZIONE DOCUMENT TERM MATRIX
+##################################################################
+
+#(= una riga per oggetto, una colonna per ogni parola)
+
+
+# 
+# 
+# corpus = Corpus(VectorSource(datidef[,12]))
+# # 
+# # #se facciamo stemming
+# # 
+# # #NB: servirebbero 140 g di memoria per lanciare questo comando->dunque così completo non è possibile lanciarlo. Capire come gestirlo.
+#  dtm = as.matrix(DocumentTermMatrix(corpus
+#                                     , control = list( stemming = TRUE, stopwords = itastopwords,
+#                                                        minWordLength = 2, removeNumbers = TRUE,
+#                                                        removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
+#  ) 
+
+#NOTA: in realtà non lo fa!
+
+##################################################################
+#                        STEMMING
+##################################################################
+
+library(SnowballC)
+# coln=colnames(dtm)
+# coln= wordStem(coln, language = "english")
+# coln= wordStem(coln, language = "italian")
+# coln= wordStem(coln, language = "spanish")
+# coln= wordStem(coln, language = "danish")
+# coln= wordStem(coln, language = "french")
+# coln= wordStem(coln, language = "german")
+# colnames(dtm)=coln
+# 
+# ##################################################################
+# #
+# #
+# #
+# #
+# #creo la matrice finale degli oggetti che conta la presenza delle singole parole stemmate
+# #
+# #
+# #
+# #
+# ##################################################################
+# 
+# len = 0
+# idx = 1
+# 
+# #
+# #
+# #
+# # Ordinare la matrice dt2
+# #
+# #
+# #
+# coln=sort(coln)
+# colnfin = coln
+# #conto il numero di parole diverse in tutti gli oggetti
+# for (i in 2:length(coln))
+# {
+#   if (colnfin[idx]!=coln[i])
+#   {
+#     len = len +1
+#     idx = idx + 1 
+#     colnfin[idx]=coln[i]
+#   }
+# }
+# #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
+# word=character(len)
+# objdef = matrix(0,nrow=nrow(dtm),ncol=len)
+# #inserisco tutte le parole diverse in oarine alfabetico in word
+# for (i in 1:len) 
+# {
+#   word[i]= colnfin[i]
+# }
+# 
+# for (j in 1:length(word))
+# {
+#   for (i in 1:ncol(dtm))
+#   {
+#     if (word[j] == coln[i])
+#     {
+#       for (k in 1:nrow(dtm))
+#       {
+#         objdef[k,j]=objdef[k,j]+dtm[k,i]
+#       }
+#     }
+#   }
+# }
+# colnames(objdef)=word
+# 
+# #se avevo pi? colonne uguali la presenza ? stata sommata, devo portare tutti in termini di 0,1
+# for (i in 1:nrow(objdef))
+# {
+#   for (j in 1:ncol(objdef))
+#   {
+#     if (objdef[i,j]>1)
+#     {
+#       objdef[i,j]=1
+#     }
+#   }
+# }
+
+#OBJDEF MATRICE CON VALORI DI PRESENZA PER L'OGGETTO
+
+
+##################################################################
+#
+#
+#
+#
+#creo la matrice finale dei domini dei sender che conta la presenza dei singoli domini
+#
+#
+#
+#
+##################################################################
+#ottengo tutti i dominii
+# len = 0
+# alldom=datidef[,8]
+# #dominii in ordine alfabetico
+# alldom= sort(alldom)
+# #conto e mi salvo tutti i dominii diversi
+# tmpdom = character(nrow(datidef))
+# idx=1
+# tmpdom[idx]=toString(alldom[idx])
+# len=1
+# for (i in 2:nrow(datidef))
+# {
+#   if (tmpdom[idx]!=toString(alldom[i]))
+#   {
+#     len = len +1
+#     idx=idx+1
+#     tmpdom[idx]=toString(alldom[i])
+#   }
+# }
+# #creo un vettore che contiene tutti i dominii Diversi (serve per colnames) e la matrice sendomdef finale
+# senderdom= character(len)
+# for (i in 1:len)
+# {
+#   senderdom[i]=tmpdom[i]
+# }
+# sendomdef = matrix(0, nrow=nrow(datidef), ncol=len)
+# #creo la matrice finale
+# for (i in 1:nrow(sendomdef))
+# {
+#   for (j in 1:length(senderdom))
+#   {
+#     if (datidef[i,8]== senderdom[j])
+#     {
+#       sendomdef[i,j]= 1
+#       j = length(senderdom)+1
+#     }
+#   }
+# }
+# colnames(sendomdef)=senderdom
 
 
 #SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
