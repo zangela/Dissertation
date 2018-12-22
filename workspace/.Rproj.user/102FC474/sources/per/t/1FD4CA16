@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "839508462",
+    "hash" : "878838555",
     "id" : "1FD4CA16",
-    "lastKnownWriteTime" : 1545337310,
-    "last_content_update" : 1545337310810,
+    "lastKnownWriteTime" : 1545495518,
+    "last_content_update" : 1545495518510,
     "path" : "C:/Users/Angela/Desktop/workspace/workspace/tesi_text_mining.R",
     "project_path" : "tesi_text_mining.R",
     "properties" : {
-        "cursorPosition" : "677,13",
-        "scrollLine" : "670"
+        "cursorPosition" : "734,27",
+        "scrollLine" : "722"
     },
     "relative_order" : 1,
     "source_on_save" : false,

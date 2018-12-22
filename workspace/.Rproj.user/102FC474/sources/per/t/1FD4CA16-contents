@@ -39,13 +39,13 @@ for (i in 1:nrow(dati))
       if ((as.numeric(datidef[i,index])<18)&(as.numeric(datidef[i,index]) >7))
       {
         index = index+1
-        datidef[i,index]=1 #fascia notturna
+        datidef[i,index]=1 #fascia lavorativa
         index = index+1
       }
       else
       {
         index = index+1
-        datidef[i,index]=0 #fascia lavorativa
+        datidef[i,index]=0 #fascia notturna
         index = index+1
       }
     }
@@ -222,7 +222,7 @@ barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main=
         ylim=(0:1), col=2:3)
 
 #=0 fascia notturna
-#=1fascia lavorativa
+#=1 fascia lavorativa
 
 #capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono-> capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
 #in "conteggio" abbiamo gi? il tot di email dei tre tipi: ci prendiamo quello che ci interessa
@@ -476,7 +476,7 @@ require(tau)
 nchars= sapply(as.vector(datidef[,12]),nchar) #(conta anche gli spazi)
 nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per oggetto
 
-boxplot(nchars~datidef[,5],col=2:4)
+boxplot(nchars~datidef[,5],col=2:4, main="Distribuzione dei caratteri per tipologia di Y", ylab="Freq assolute")
 
 #0=passate
 #1=rigettate
@@ -690,6 +690,34 @@ https://data-flair.training/blogs/e1071-in-r/
 #svm tradizionale
 
 model=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
+
+#svm(x, y = NULL, scale = TRUE, type = NULL, kernel =
+#      "radial", degree = 3, gamma = if (is.vector(x)) 1 else 1 / ncol(x),
+#    coef0 = 0, cost = 1, nu = 0.5,
+#    class.weights = NULL, cachesize = 40, tolerance = 0.001, epsilon = 0.1,
+#    shrinking = TRUE, cross = 0, probability = FALSE, fitted = TRUE,
+#    ..., subset, na.action = na.omit)
+
+#x=dev'essere una matrice
+#y=var interesse
+#scale=rende a media nulla e varianza unitaria
+#type=default è una classificazione a c livelli
+#kernel=il tipo di kernel da usare
+#degree=serve se si sceglie un kernel polinomiale
+#gamma=necessario per tutti i kernel tranne il lineare. Default=1/(dimensione data)
+#cost=costante di regolarizzazione del moltiplicatore di lagrange. default=1
+#class.weights=a named vector of weights for the different classes, used for asymmetric class sizes. Not all factor levels have to be supplied (default weight: 1). All components have to be named. Specifying "inverse" will choose the weights inversely proportional to the class distribution.
+#epsilon= epsilon in the insensitive-loss function (default: 0.1)
+#shrinking=option whether to use the shrinking-heuristics (default: TRUE)
+#cross =if a integer value k>0 is specified, a k-fold cross validation on the training data is performed to assess the quality of the model: the accuracy rate for classification and the Mean Squared Error for regression
+
+#For multiclass-classification with k levels, k>2, libsvm uses the ‘one-against-one’-approach, in which k(k-1)/2 binary classifiers are trained; the appropriate class is found by a voting scheme.
+#plot.svm allows a simple graphical visualization of classification models.
+
+
+#dat=data.frame(objdef, datidef[,6])
+#plot(model,dat) ->dovrebbe mostrarmi l'iperpiano
+
 
 #oss: se cerco di fare cross validation mi da errore e non stima il modello (cross=k) con k>0 par di lisciamento
 summary(model)
@@ -1023,13 +1051,14 @@ library(SnowballC)
 
 ##################################################################
 #                     ANALISI DELLE FREQUENZE
+#                     non le posso lanciare xk troppo pesanti!!!!!!!!!
 ##################################################################
 
 
 #Avremo una matrice molto sparsa
 
 #per avere la frequenza di ogni singola parola univoca:
-freq_obj = colSums(as.matrix(objdef))
+freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
 
 #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
 ord_obj = sort(freq_obj,decreasing=T)
