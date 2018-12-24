@@ -94,7 +94,7 @@ rn = rep(0,nrow(datidef))
 for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 {
   rn[i]=i
-  if ((as.character(datidef[i,8])=="steelco.veniceplaza.net")|(as.character(datidef[i,8])=="steelcogroup.com")|(as.character(datidef[i,8])=="steelcoservice.com")|(as.character(datidef[i,8])=="steelcospa.com"))
+  if ( (as.character(datidef[i,8])=="steelco-usa.com")|(as.character(datidef[i,8])=="steelco.veniceplaza.net")|(as.character(datidef[i,8])=="steelcogroup.com")|(as.character(datidef[i,8])=="steelcoservice.com")|(as.character(datidef[i,8])=="steelcospa.com"))
     datidef[i,11] = 1
 }
 rownames(datidef)=rn
@@ -289,7 +289,7 @@ barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",yl
 
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
 freq_mese=table(datidef[,1])
-#ATTENZIONE!!!!C'è IL MESO 0 CHE NON DOVREBBE ESSERCI!!!!!
+
 k = sort(as.numeric(names(freq_mese)))
 f = matrix(0, nrow=1, ncol=length(freq_mese))
 names =as.numeric(names(freq_mese))
@@ -465,7 +465,7 @@ library(devtools) #installarla se necessario
 library (TextWiller)
 library(ggplot2) 
 require(tau)
-
+library(e1071)
 
 ##################################################################
 #                         PREPROCESSING
@@ -481,9 +481,6 @@ boxplot(nchars~datidef[,5],col=2:4, main="Distribuzione dei caratteri per tipolo
 #0=passate
 #1=rigettate
 #2=quarantenat.test(nchars~tweets$soggettivo)
-#sembrerebbe che le 0 abbiano molta pi? variabilit?
-#le 1 abbiano una maggior numero di caratteri, ma piu' ripetitivi
-
 
 ## Gestione emoticons  
 datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
@@ -509,7 +506,7 @@ datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
 
 #Analisi degli n-grammi 
 #require(tau)
- 
+
 bigrams = textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
 sort(bigrams,decreasing=TRUE)[1:20]
 
@@ -608,7 +605,7 @@ for (i in 2:length(dic))
 }
 #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
 dictionary=character(len)
-#inserisco tutte le parole diverse in oarine alfabetico in word
+#inserisco tutte le parole diverse in oarine alfabetico in dictionary
 for (i in 1:len) 
 {
   dictionary[i]= colnfin[i]
@@ -675,199 +672,49 @@ length(domain)
 #
 #
 #
-#   SVM: TODO 
-#   start
+#   inizio CREAZIONE DELLE MOTIVAZIONI NEL CASO ALLDEF.CSV
+# 
 #
 #
 ##################################################################
 
-#LINK UTILE
-https://data-flair.training/blogs/e1071-in-r/
-
-
-##################################################################  
-  
-#svm tradizionale
-
-model=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
-
-#svm(x, y = NULL, scale = TRUE, type = NULL, kernel =
-#      "radial", degree = 3, gamma = if (is.vector(x)) 1 else 1 / ncol(x),
-#    coef0 = 0, cost = 1, nu = 0.5,
-#    class.weights = NULL, cachesize = 40, tolerance = 0.001, epsilon = 0.1,
-#    shrinking = TRUE, cross = 0, probability = FALSE, fitted = TRUE,
-#    ..., subset, na.action = na.omit)
-
-#x=dev'essere una matrice
-#y=var interesse
-#scale=rende a media nulla e varianza unitaria
-#type=default è una classificazione a c livelli
-#kernel=il tipo di kernel da usare
-#degree=serve se si sceglie un kernel polinomiale
-#gamma=necessario per tutti i kernel tranne il lineare. Default=1/(dimensione data)
-#cost=costante di regolarizzazione del moltiplicatore di lagrange. default=1
-#class.weights=a named vector of weights for the different classes, used for asymmetric class sizes. Not all factor levels have to be supplied (default weight: 1). All components have to be named. Specifying "inverse" will choose the weights inversely proportional to the class distribution.
-#epsilon= epsilon in the insensitive-loss function (default: 0.1)
-#shrinking=option whether to use the shrinking-heuristics (default: TRUE)
-#cross =if a integer value k>0 is specified, a k-fold cross validation on the training data is performed to assess the quality of the model: the accuracy rate for classification and the Mean Squared Error for regression
-
-#For multiclass-classification with k levels, k>2, libsvm uses the ‘one-against-one’-approach, in which k(k-1)/2 binary classifiers are trained; the appropriate class is found by a voting scheme.
-#plot.svm allows a simple graphical visualization of classification models.
-
-
-#dat=data.frame(objdef, datidef[,6])
-#plot(model,dat) ->dovrebbe mostrarmi l'iperpiano
-
-
-#oss: se cerco di fare cross validation mi da errore e non stima il modello (cross=k) con k>0 par di lisciamento
-summary(model)
-
-pred <- predict(model,objdef)
-system.time(pred <- predict(model,objdef))
-table(as.integer(pred),datidef[,6])
-
-
-#svm tuned
-
-#cerco di lisciare il modello
-tuned_parameters <- tune.svm((datidef[,6]~objdef), data =as.numeric(datidef))
-
-svmTune <- tune(svm, train.x=x, train.y=y, kernel='radial',
-                ranges=list(cost=10^(-5:5), gamma=seq(0, 100, 0.5)),
-                class.weights=c('0'=numZeros/(numZeros+numOnes),
-                                '1'=numOnes/(numZeros+numOnes)))
-
-
-
-#salvo il modello che darò in pasto al successivo set di dati								
-saveRDS(model, file = "C:\\Users\\Angela\\Desktop\\rds\\model.rds") #percorso dove salvarlo.Mantenere la doppia \
-
-#richiamo il modello salvato
-model1=readRDS("C:\\Users\\Angela\\Desktop\\rds\\model.rds")
-
-#cerco di partire dai valori ottenuti in precedenza e migliorarli
-model1=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
-summary(model)
-
-pred <- predict(model,objdef)
-system.time(pred <- predict(model,objdef))
-table(as.integer(pred),datidef[,6])
-  
-
-##################################################################  
-  
-  
-  
-################################################################## 
-
-#CODICE ANCORA DA TESTARE
-
-
-################################################################## 
-svm_data <- function(type, vector, min, max)
+#ottengo tutti i motivation
+len = 0
+allmot=datidef[,13]
+#motivation in ordine alfabetico
+allmot= sort(allmot)
+#conto e mi salvo tutte le motivation diverse
+tmpmot = character(nrow(datidef))
+idx=1
+tmpmot[idx]=""
+len=1
+for (i in 2:nrow(datidef))
 {
-  # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
-  
-  # la variabile vector contiene il dizionario di parole o di dominii in base al type
-  
-  # min % max è il range di indice di datidef che vengono analizzati 
-  # in una singola esecuzione per il calcolo degli input/output di svm
-  # SEMPLICE: creo objdef e domdef per le righe di datidef che vanno da min a max ;)
-  if (type == 0) # calcolo di objdef
+  if (tmpmot[idx]!=toString(allmot[i]))
   {
-    
-  }
-  else if (type == 1) # calcolo di domdef
-  {
-    
+    len = len +1
+    idx=idx+1
+    tmpmot[idx]=toString(allmot[i]) #salvo le motivation diverse in modo unico
   }
 }
+len = len -1 #ho tolto il primo carattere che è "" utilizzato per saltare tutti quelli vuoti
 
-# impostare indici del dataset per il trainig
-train_min = #impostare
-train_max = #impostare
-# impostare indici del dataset per la validation
-validation_min = #impostare
-validation_min = #impostare
-# impostare indici del dataset per il test
-test_min = #impostare
-test_min = #impostare
-train = FALSE
-tuning = FALSE
-
-while(train == FALSE)
+#creo un vettore che contiene tutti le motivation Diversi (serve per colnames) 
+motivation= character(len)
+idx = 2
+for (i in 1:len)
 {
-  n_part = 50
-  part = as.integer(nrow(datidef)/n_part)
-  tmp = rep("", 0)
-  for (i in 1:(n_part+1))
-  {
-    # calcolare per ogni pezzo la matrice objdef per svm training 
-    objdef = svm_data(0, dictionary, min, max)
-    # calcolare per ogni pezzo la matrice domdef per svm training
-    domdef = svm_data(1, domain, min, max)
-    # allenare svm
-    svm_model <- svm() # impostare
-    train = TRUE
-  }
-  if (tuning == FALSE)
-  {
-    # calcolare per ogni pezzo la matrice objdef per svm validation 
-    objdef = svm_data(0, dictionary, min, max)
-    # calcolare per ogni pezzo la matrice domdef per svm validation
-    domdef = svm_data(1, domain, min, max)
-    # tuning svm
-    tune = tune.svm() #impostare
-    # parse dell'output per ottenere i valori migliori per svm
-    tune=strsplit() #impostare
-    #impostazione dei nuovi valori al modello svm
-    gamma = #impostare
-    cost = #impstare
-    kernel = #impostare
-      # etc.....
-    train = FALSE
-  }
+  motivation[i]=tmpmot[idx]
+  idx = idx +1
 }
-# calcolare per ogni pezzo la matrice objdef per svm test 
-objdef = svm_data(0, dictionary, min, max)
-# calcolare per ogni pezzo la matrice domdef per svm test
-domdef = svm_data(1, domain, min, max)
-
-# calcolo delle statistiche
-
-
-# Codice from 
-https://www.r-bloggers.com/support-vector-machine-simplified-using-r/
-  
-  
-# Predict Target Label
-valX <-svm.validate[,4:61]
-pred <- predict(svm.tune, valX, type=”prob”)[2]
-
-# Model Performance Statistics
-pred_val <-prediction(pred[,2], svm.validate$Class)
-
-# Calculating Area under Curve
-perf_val <- performance(pred_val,”auc”)
-perf_val
-
-# Calculating True Positive and False Positive Rate
-perf_val <- performance(pred_val, “tpr”, “fpr”)
-
-# Plot the ROC curve
-plot(perf_val, col = “green”, lwd = 1.5)
-
-#Calculating KS statistics
-ks <- max(attr(perf_val, “y.values”)[[1]] – (attr(perf_val, “x.values”)[[1]]))
-ks
 
 
 ##################################################################
 #
 #
 #
-#   SVM: TODO 
-#   end
+#   fine CREAZIONE DELLE MOTIVAZIONI NEL CASO ALLDEF.CSV
+#   presente in ***motivation***
 #
 #
 ##################################################################
@@ -884,170 +731,171 @@ ks
 
 
 
-
-
-##################################################################
-#                        CREAZIONE DOCUMENT TERM MATRIX
-##################################################################
-
-#(= una riga per oggetto, una colonna per ogni parola)
-
-
+# #NON FATTIBILE SU ALL.CSSV
 # 
 # 
+# ##################################################################
+# #                        CREAZIONE DOCUMENT TERM MATRIX
+# ##################################################################
+# 
+# #(= una riga per oggetto, una colonna per ogni parola)
+# 
+# 
+# # 
+# # 
 # corpus = Corpus(VectorSource(datidef[,12]))
+# # # 
+# # # #se facciamo stemming
+# # # 
+# # # #NB: servirebbero 140 g di memoria per lanciare questo comando->dunque così completo non è possibile lanciarlo. Capire come gestirlo.
+#   dtm = as.matrix(DocumentTermMatrix(corpus
+#                                      , control = list( stemming = TRUE, stopwords = itastopwords,
+#                                                         minWordLength = 2, removeNumbers = TRUE,
+#                                                         removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
+#   ) 
+# 
+# #NOTA: in realtà non lo fa!
+# 
+# ##################################################################
+# #                        STEMMING
+# ##################################################################
+# 
+# library(SnowballC)
+#  coln=colnames(dtm)
+#  coln= wordStem(coln, language = "english")
+#  coln= wordStem(coln, language = "italian")
+#  coln= wordStem(coln, language = "spanish")
+#  coln= wordStem(coln, language = "danish")
+#  coln= wordStem(coln, language = "french")
+#  coln= wordStem(coln, language = "german")
+#  colnames(dtm)=coln
 # # 
-# # #se facciamo stemming
+# # ##################################################################
+# # #
+# # #
+# # #
+# # #
+# # #creo la matrice finale degli oggetti che conta la presenza delle singole parole stemmate
+# # #
+# # #
+# # #
+# # #
+# # ##################################################################
 # # 
-# # #NB: servirebbero 140 g di memoria per lanciare questo comando->dunque così completo non è possibile lanciarlo. Capire come gestirlo.
-#  dtm = as.matrix(DocumentTermMatrix(corpus
-#                                     , control = list( stemming = TRUE, stopwords = itastopwords,
-#                                                        minWordLength = 2, removeNumbers = TRUE,
-#                                                        removePunctuation = FALSE, bounds=list(local = c(1,Inf)) ))
-#  ) 
-
-#NOTA: in realtà non lo fa!
-
-##################################################################
-#                        STEMMING
-##################################################################
-
-library(SnowballC)
-# coln=colnames(dtm)
-# coln= wordStem(coln, language = "english")
-# coln= wordStem(coln, language = "italian")
-# coln= wordStem(coln, language = "spanish")
-# coln= wordStem(coln, language = "danish")
-# coln= wordStem(coln, language = "french")
-# coln= wordStem(coln, language = "german")
-# colnames(dtm)=coln
+#  len = 0
+#  idx = 1
+# # 
+# # #
+# # #
+# # #
+# # # Ordinare la matrice dt2
+# # #
+# # #
+# # #
+#  coln=sort(coln)
+#  colnfin = coln
+#  #conto il numero di parole diverse in tutti gli oggetti
+#  for (i in 2:length(coln))
+#  {
+#    if (colnfin[idx]!=coln[i]) #la parola idx (indice=1) è diversa dalla parola i (indice=2) ->ergo: le due parole successive sono diverse?se si
+#    {
+#      len = len +1
+#      idx = idx + 1 
+#      colnfin[idx]=coln[i]
+#    }
+#  }
+#  #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
+#  word=character(len)
+#  objdef = matrix(0,nrow=nrow(dtm),ncol=len)
+#  #inserisco tutte le parole diverse in ordine alfabetico in word
+#  for (i in 1:len) 
+#  {
+#    word[i]= colnfin[i]
+#  }
+#  
+#  for (j in 1:length(word))
+#  {
+#    for (i in 1:ncol(dtm))
+#    {
+#      if (word[j] == coln[i])
+#      {
+#        for (k in 1:nrow(dtm))
+#        {
+#          objdef[k,j]=objdef[k,j]+dtm[k,i]
+#        }
+#      }
+#    }
+#  }
+#  colnames(objdef)=word
+# # 
+# # #se avevo pi? colonne uguali la presenza ? stata sommata, devo portare tutti in termini di 0,1
+#  for (i in 1:nrow(objdef))
+#  {
+#    for (j in 1:ncol(objdef))
+#    {
+#      if (objdef[i,j]>1)
+#      {
+#        objdef[i,j]=1
+#      }
+#    }
+#  }
+# 
+# #OBJDEF MATRICE CON VALORI DI PRESENZA PER L'OGGETTO
+# 
 # 
 # ##################################################################
 # #
 # #
 # #
 # #
-# #creo la matrice finale degli oggetti che conta la presenza delle singole parole stemmate
+# #creo la matrice finale dei domini dei sender che conta la presenza dei singoli domini
 # #
 # #
 # #
 # #
 # ##################################################################
-# 
-# len = 0
-# idx = 1
-# 
-# #
-# #
-# #
-# # Ordinare la matrice dt2
-# #
-# #
-# #
-# coln=sort(coln)
-# colnfin = coln
-# #conto il numero di parole diverse in tutti gli oggetti
-# for (i in 2:length(coln))
-# {
-#   if (colnfin[idx]!=coln[i])
-#   {
-#     len = len +1
-#     idx = idx + 1 
-#     colnfin[idx]=coln[i]
-#   }
-# }
-# #creo un vettore per memorizzare tutte le parole diverse (serve per colnames) e la matrice objdef finale
-# word=character(len)
-# objdef = matrix(0,nrow=nrow(dtm),ncol=len)
-# #inserisco tutte le parole diverse in oarine alfabetico in word
-# for (i in 1:len) 
-# {
-#   word[i]= colnfin[i]
-# }
-# 
-# for (j in 1:length(word))
-# {
-#   for (i in 1:ncol(dtm))
-#   {
-#     if (word[j] == coln[i])
-#     {
-#       for (k in 1:nrow(dtm))
-#       {
-#         objdef[k,j]=objdef[k,j]+dtm[k,i]
-#       }
-#     }
-#   }
-# }
-# colnames(objdef)=word
-# 
-# #se avevo pi? colonne uguali la presenza ? stata sommata, devo portare tutti in termini di 0,1
-# for (i in 1:nrow(objdef))
-# {
-#   for (j in 1:ncol(objdef))
-#   {
-#     if (objdef[i,j]>1)
-#     {
-#       objdef[i,j]=1
-#     }
-#   }
-# }
-
-#OBJDEF MATRICE CON VALORI DI PRESENZA PER L'OGGETTO
-
-
-##################################################################
-#
-#
-#
-#
-#creo la matrice finale dei domini dei sender che conta la presenza dei singoli domini
-#
-#
-#
-#
-##################################################################
-#ottengo tutti i dominii
-# len = 0
+# #ottengo tutti i dominii
+#  len = 0
 # alldom=datidef[,8]
-# #dominii in ordine alfabetico
-# alldom= sort(alldom)
-# #conto e mi salvo tutti i dominii diversi
-# tmpdom = character(nrow(datidef))
-# idx=1
-# tmpdom[idx]=toString(alldom[idx])
-# len=1
-# for (i in 2:nrow(datidef))
-# {
-#   if (tmpdom[idx]!=toString(alldom[i]))
-#   {
-#     len = len +1
-#     idx=idx+1
-#     tmpdom[idx]=toString(alldom[i])
-#   }
-# }
-# #creo un vettore che contiene tutti i dominii Diversi (serve per colnames) e la matrice sendomdef finale
-# senderdom= character(len)
-# for (i in 1:len)
-# {
-#   senderdom[i]=tmpdom[i]
-# }
-# sendomdef = matrix(0, nrow=nrow(datidef), ncol=len)
-# #creo la matrice finale
-# for (i in 1:nrow(sendomdef))
-# {
-#   for (j in 1:length(senderdom))
-#   {
-#     if (datidef[i,8]== senderdom[j])
-#     {
-#       sendomdef[i,j]= 1
-#       j = length(senderdom)+1
-#     }
-#   }
-# }
-# colnames(sendomdef)=senderdom
-
-
-#SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
+#  #dominii in ordine alfabetico
+#  alldom= sort(alldom)
+#  #conto e mi salvo tutti i dominii diversi
+#  tmpdom = character(nrow(datidef))
+#  idx=1
+#  tmpdom[idx]=toString(alldom[idx])
+#  len=1
+#  for (i in 2:nrow(datidef))
+#  {
+#    if (tmpdom[idx]!=toString(alldom[i]))
+#    {
+#      len = len +1
+#      idx=idx+1
+#      tmpdom[idx]=toString(alldom[i])
+#    }
+#  }
+# # #creo un vettore che contiene tutti i dominii Diversi (serve per colnames) e la matrice sendomdef finale
+#  senderdom= character(len)
+#  for (i in 1:len)
+#  {
+#    senderdom[i]=tmpdom[i]
+#  }
+#  sendomdef = matrix(0, nrow=nrow(datidef), ncol=len)
+#  #creo la matrice finale
+#  for (i in 1:nrow(sendomdef))
+#  {
+#    for (j in 1:length(senderdom))
+#    {
+#      if (datidef[i,8]== senderdom[j])
+#      {
+#        sendomdef[i,j]= 1
+#        j = length(senderdom)+1
+#      }
+#    }
+#  }
+#  colnames(sendomdef)=senderdom
+# 
+# 
+# #SENDOMDEF MATRICE DI PRESENZA PER I DOMINII DEI SENDERS
 
 ##################################################################
 #                     ANALISI DELLE FREQUENZE
@@ -1065,67 +913,314 @@ ord_obj = sort(freq_obj,decreasing=T)
 top_six=(head(ord_obj)/sum(ord_obj))
 
 
-barplot(ord_obj, ylab="Frequenze assolute", main="Parole ppi? frequenti nell'oggetto",ylim=(0:1), col=2:3)
+barplot(ord_obj, ylab="Frequenze assolute", main="Parole più frequenti nell'oggetto",ylim=(0:1), col=2)
 
-##################################################################
-#                     ASSEGNAZIONE SENTIMENT
-##################################################################
+# Chiamiamo i pacchetti necessari
+library(MASS)
+library(tidyverse)
 
-
-#lo useremo come possibile predittore  futuro
-sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
-datidef=cbind(datidef,sent)
-
-#il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
-
-prop.table(table(datidef[,16],exclude = NULL)) #ci da la proporzione di sent
-barplot(table(datidef[,16]),col=2:4)
-
-##################################################################
-#
-#
-#
-#
-#                       ANALISI GRAFICA
-#
-#
-#
-#
-##################################################################
-
-##################################################################
-#                     FREQUENZA PAROLE NELL'OGGETTO
-##################################################################
-
-library(ggplot2) 
-wf = data.frame(word=names(ord_obj), freq=ord_obj)
-p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
-p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-p
-
-#Word Cloud
-set.seed(123)
-
-wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-#piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
-
-##################################################################
-#                     FREQUENZA SENDER
-##################################################################
-
-freq_send = colSums(sendomdef)
-
-wf1 = data.frame(word=names(freq_send), freq=freq_send)
-p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
-p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-p1
-
-#Word Cloud
-set.seed(123)
-wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-
-
-
-
+farms %>% 
+  ggplot(aes(x = as.data.frame(ord_obj)) +
+           geom_bar()
+         
+         
+         
+         
+         ##################################################################
+         #                     ASSEGNAZIONE SENTIMENT
+         ##################################################################
+         
+         
+         #lo useremo come possibile predittore  futuro
+         sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
+         datidef=cbind(datidef,sent)
+         
+         #il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
+         
+         prop.table(table(datidef[,16],exclude = NULL)) #ci da la proporzione di sent
+         barplot(table(datidef[,16]),col=2:4)
+         
+         ##################################################################
+         #
+         #
+         #
+         #
+         #                       ANALISI GRAFICA
+         #
+         #
+         #
+         #
+         ##################################################################
+         
+         ##################################################################
+         #                     FREQUENZA PAROLE NELL'OGGETTO
+         ##################################################################
+         
+         library(ggplot2) 
+         wf = data.frame(word=names(ord_obj), freq=ord_obj)
+         p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
+         p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+         p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+         p
+         
+         #Word Cloud
+         set.seed(123)
+         
+         wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+         #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
+         
+         ##################################################################
+         #                     FREQUENZA SENDER
+         ##################################################################
+         
+         freq_send = colSums(sendomdef)
+         
+         wf1 = data.frame(word=names(freq_send), freq=freq_send)
+         p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
+         p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+         p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+         p1
+         
+         #Word Cloud
+         set.seed(123)
+         wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+         
+         
+         
+         ##################################################################
+         #
+         #
+         #
+         #   SVM: TODO 
+         #   start
+         #
+         #
+         ##################################################################
+         
+         #LINK UTILE
+         #https://data-flair.training/blogs/e1071-in-r/
+         
+         
+         ##################################################################  
+         
+         #svm tradizionale
+         
+         model=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
+         
+         #svm(x, y = NULL, scale = TRUE, type = NULL, kernel =
+         #      "radial", degree = 3, gamma = if (is.vector(x)) 1 else 1 / ncol(x),
+         #    coef0 = 0, cost = 1, nu = 0.5,
+         #    class.weights = NULL, cachesize = 40, tolerance = 0.001, epsilon = 0.1,
+         #    shrinking = TRUE, cross = 0, probability = FALSE, fitted = TRUE,
+         #    ..., subset, na.action = na.omit)
+         
+         #x=dev'essere una matrice
+         #y=var interesse
+         #scale=rende a media nulla e varianza unitaria
+         #type=default è una classificazione a c livelli
+         #kernel=il tipo di kernel da usare
+         #degree=serve se si sceglie un kernel polinomiale
+         #gamma=necessario per tutti i kernel tranne il lineare. Default=1/(dimensione data)
+         #cost=costante di regolarizzazione del moltiplicatore di lagrange. default=1
+         #class.weights=a named vector of weights for the different classes, used for asymmetric class sizes. Not all factor levels have to be supplied (default weight: 1). All components have to be named. Specifying "inverse" will choose the weights inversely proportional to the class distribution.
+         #epsilon= epsilon in the insensitive-loss function (default: 0.1)
+         #shrinking=option whether to use the shrinking-heuristics (default: TRUE)
+         #cross =if a integer value k>0 is specified, a k-fold cross validation on the training data is performed to assess the quality of the model: the accuracy rate for classification and the Mean Squared Error for regression
+         
+         #For multiclass-classification with k levels, k>2, libsvm uses the ‘one-against-one’-approach, in which k(k-1)/2 binary classifiers are trained; the appropriate class is found by a voting scheme.
+         #plot.svm allows a simple graphical visualization of classification models.
+         
+         
+         #dat=data.frame(objdef, datidef[,6])
+         #plot(model,dat) ->dovrebbe mostrarmi l'iperpiano. nn lo fa xk ha 3 dimensioni
+         
+         
+         #oss: se cerco di fare cross validation mi da errore e non stima il modello (cross=k) con k>0 par di lisciamento
+         summary(model)
+         
+         pred <- predict(model,objdef)
+         system.time(pred <- predict(model,objdef))
+         table(as.integer(pred),datidef[,6])
+         
+         
+         #svm tuned
+         
+         #cerco di lisciare il modello
+         tuned_parameters <- tune.svm((datidef[,6]~objdef), data =as.numeric(datidef))
+         
+         svmTune <- tune(svm, train.x=x, train.y=y, kernel='radial',
+                         ranges=list(cost=10^(-5:5), gamma=seq(0, 100, 0.5)),
+                         class.weights=c('0'=numZeros/(numZeros+numOnes),
+                                         '1'=numOnes/(numZeros+numOnes)))
+         
+         
+         
+         #salvo il modello che darò in pasto al successivo set di dati								
+         saveRDS(model, file = "C:\\Users\\Angela\\Desktop\\rds\\model.rds") #percorso dove salvarlo.Mantenere la doppia \
+         
+         #richiamo il modello salvato
+         model1=readRDS("C:\\Users\\Angela\\Desktop\\rds\\model.rds")
+         
+         #cerco di partire dai valori ottenuti in precedenza e migliorarli
+         model1=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
+         summary(model)
+         
+         pred <- predict(model,objdef)
+         system.time(pred <- predict(model,objdef))
+         table(as.integer(pred),datidef[,6])
+         
+         
+         ##################################################################  
+         
+         
+         ################################################################## 
+         
+         #CODICE ANCORA DA TESTARE
+         
+         ################################################################## 
+         svm_data <- function(type, vector, min, max)
+         {
+           
+           
+           # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
+           
+           # la variabile vector contiene il dizionario di parole o di dominii in base al type
+           
+           # min % max è il range di indice di datidef che vengono analizzati 
+           # in una singola esecuzione per il calcolo degli input/output di svm
+           # SEMPLICE: creo objdef e domdef per le righe di datidef che vanno da min a max ;)
+           if (type == 0) # calcolo di objdef
+           {
+             col= 49
+             matrix = matrix(0, nrow=(max-min), ncol=length(dictionary))
+             for (i in min:max)
+             {
+               obj = strsplit(datidef[i, 12], " ")
+               print(obj)
+               for (j in 1:length(obj[[1]]))
+               {
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "english")
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "italian")
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "spanish")
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "danish")
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "french")
+                 obj[[1]][j] =wordStem(obj[[1]][j], language = "german")
+               }
+               for (k in 1:length(obj[[1]]))
+               {
+                 position=pmatch(obj[[1]][k], dictionary)
+                 print(position)
+                 matrix[i,position[[1]]]=1
+               }
+             }
+             #for to compute
+             
+           }
+           else if (type == 1) # calcolo di domdef
+           {
+             col= 49
+             matrix = matrix(0, nrow=(max-min), ncol=col)
+             #for to compute
+           }
+           else if (type == 2) # calcolo motivation
+           {
+             col= 49
+             matrix = matrix(0, nrow=(max-min), ncol=col)
+             #for to compute
+           }
+           return(matrix)
+         }
+         k = svm_data(0, dictionary, 1,2)
+         # impostare indici del dataset per il trainig
+         train_min = #impostare
+           train_max = #impostare
+           # impostare indici del dataset per la validation
+           validation_min = #impostare
+           validation_min = #impostare
+           # impostare indici del dataset per il test
+           test_min = #impostare
+           test_min = #impostare
+           train = FALSE
+         tuning = FALSE
+         
+         while(train == FALSE)
+         {
+           n_part = 50
+           part = as.integer(nrow(datidef)/n_part)
+           tmp = rep("", 0)
+           for (i in 1:(n_part+1))
+           {
+             # calcolare per ogni pezzo la matrice objdef per svm training 
+             objdef = svm_data(0, dictionary, min, max)
+             # calcolare per ogni pezzo la matrice domdef per svm training
+             domdef = svm_data(1, domain, min, max)
+             # allenare svm
+             svm_model <- svm() # impostare
+             train = TRUE
+           }
+           if (tuning == FALSE)
+           {
+             # calcolare per ogni pezzo la matrice objdef per svm validation 
+             objdef = svm_data(0, dictionary, min, max)
+             # calcolare per ogni pezzo la matrice domdef per svm validation
+             domdef = svm_data(1, domain, min, max)
+             # tuning svm
+             tune = tune.svm() #impostare
+             # parse dell'output per ottenere i valori migliori per svm
+             tune=strsplit() #impostare
+             #impostazione dei nuovi valori al modello svm
+             gamma = #impostare
+               cost = #impstare
+               kernel = #impostare
+               # etc.....
+               train = FALSE
+           }
+         }
+         # calcolare per ogni pezzo la matrice objdef per svm test 
+         objdef = svm_data(0, dictionary, min, max)
+         # calcolare per ogni pezzo la matrice domdef per svm test
+         domdef = svm_data(1, domain, min, max)
+         
+         # calcolo delle statistiche
+         
+         
+         # Codice from 
+         https://www.r-bloggers.com/support-vector-machine-simplified-using-r/
+           
+           
+           # Predict Target Label
+           valX <-svm.validate[,4:61]
+         pred <- predict(svm.tune, valX, type=”prob”)[2]
+         
+         # Model Performance Statistics
+         pred_val <-prediction(pred[,2], svm.validate$Class)
+         
+         # Calculating Area under Curve
+         perf_val <- performance(pred_val,”auc”)
+         perf_val
+         
+         # Calculating True Positive and False Positive Rate
+         perf_val <- performance(pred_val, “tpr”, “fpr”)
+         
+         # Plot the ROC curve
+         plot(perf_val, col = “green”, lwd = 1.5)
+         
+         #Calculating KS statistics
+         ks <- max(attr(perf_val, “y.values”)[[1]] – (attr(perf_val, “x.values”)[[1]]))
+         ks
+         
+         
+         ##################################################################
+         #
+         #
+         #
+         #   SVM: TODO 
+         #   end
+         #
+         #
+         ##################################################################
+         
+         
+         
+         
+         
