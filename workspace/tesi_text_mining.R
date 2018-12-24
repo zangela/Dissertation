@@ -1,3 +1,18 @@
+# Chiamiamo i pacchetti necessari
+library(MASS)
+library(tidyverse)
+#carico le librerie necessarie
+library(tm)
+library(lsa)
+library(caret)
+library(wordcloud)
+library(devtools) #installarla se necessario
+library (TextWiller)
+library(ggplot2) 
+require(tau)
+library(e1071)
+library(ggplot2) 
+library(SnowballC)
 
 rm(list=ls())
 
@@ -456,16 +471,7 @@ barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle ema
 ##################################################################
 #                         TEXT MINING SULL'OGGETTO
 ##################################################################
-#carico le librerie necessarie
-library(tm)
-library(lsa)
-library(caret)
-library(wordcloud)
-library(devtools) #installarla se necessario
-library (TextWiller)
-library(ggplot2) 
-require(tau)
-library(e1071)
+
 
 ##################################################################
 #                         PREPROCESSING
@@ -760,7 +766,7 @@ for (i in 1:len)
 # #                        STEMMING
 # ##################################################################
 # 
-# library(SnowballC)
+# 
 #  coln=colnames(dtm)
 #  coln= wordStem(coln, language = "english")
 #  coln= wordStem(coln, language = "italian")
@@ -915,13 +921,11 @@ top_six=(head(ord_obj)/sum(ord_obj))
 
 barplot(ord_obj, ylab="Frequenze assolute", main="Parole più frequenti nell'oggetto",ylim=(0:1), col=2)
 
-# Chiamiamo i pacchetti necessari
-library(MASS)
-library(tidyverse)
+
 
 farms %>% 
   ggplot(aes(x = as.data.frame(ord_obj)) +
-           geom_bar()
+           geom_bar())
          
          
          
@@ -956,12 +960,12 @@ farms %>%
          #                     FREQUENZA PAROLE NELL'OGGETTO
          ##################################################################
          
-         library(ggplot2) 
+
          wf = data.frame(word=names(ord_obj), freq=ord_obj)
          p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
          p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
          p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-         p
+         
          
          #Word Cloud
          set.seed(123)
@@ -1080,9 +1084,7 @@ farms %>%
          ################################################################## 
          svm_data <- function(type, vector, min, max)
          {
-           
-           
-           # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
+                      # la variabile type contiene il fatto che si debba calcolare objdef, domdef o altro
            
            # la variabile vector contiene il dizionario di parole o di dominii in base al type
            
@@ -1092,25 +1094,37 @@ farms %>%
            if (type == 0) # calcolo di objdef
            {
              col= 49
-             matrix = matrix(0, nrow=(max-min), ncol=length(dictionary))
-             for (i in min:max)
+             mat = matrix(0, nrow=(max-min), ncol=length(dictionary))
+            
+             for (i in 1:(max-min))
              {
-               obj = strsplit(datidef[i, 12], " ")
-               print(obj)
+               #print(datidef[i,12])
+               obj = strsplit(toString(datidef[i, 12]), " ")
+               #print(obj)
                for (j in 1:length(obj[[1]]))
                {
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "english")
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "italian")
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "spanish")
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "danish")
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "french")
-                 obj[[1]][j] =wordStem(obj[[1]][j], language = "german")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "english")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "italian")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "spanish")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "danish")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "french")
+                 obj[[1]][j] = wordStem(obj[[1]][j], language = "german")
                }
+               #print(obj[[1]])
                for (k in 1:length(obj[[1]]))
                {
-                 position=pmatch(obj[[1]][k], dictionary)
-                 print(position)
-                 matrix[i,position[[1]]]=1
+                 if (obj[[1]][k]!= "")
+                 {
+                     position=pmatch(obj[[1]][k], dictionary)
+                     print(position[[1]])
+                     print("ok")
+                     if (is.na(position[[1]])==FALSE)
+                     {
+                       print(length(dictionary))
+                       print(ncol(mat))
+                       mat[i,position[[1]]]=1
+                     }
+                 }
                }
              }
              #for to compute
@@ -1119,18 +1133,28 @@ farms %>%
            else if (type == 1) # calcolo di domdef
            {
              col= 49
-             matrix = matrix(0, nrow=(max-min), ncol=col)
+             #mat = matrix(0, nrow=(max-min), ncol=col)
              #for to compute
            }
            else if (type == 2) # calcolo motivation
            {
              col= 49
-             matrix = matrix(0, nrow=(max-min), ncol=col)
+             #mat = matrix(0, nrow=(max-min), ncol=col)
              #for to compute
            }
-           return(matrix)
+           return(mat)
          }
+         
+         
          k = svm_data(0, dictionary, 1,2)
+        
+         
+         
+         
+         
+         
+         
+         
          # impostare indici del dataset per il trainig
          train_min = #impostare
            train_max = #impostare

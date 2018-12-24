@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "3931983019",
+    "hash" : "1876532452",
     "id" : "9580CFAD",
-    "lastKnownWriteTime" : 1544979988,
-    "last_content_update" : 1544979988379,
+    "lastKnownWriteTime" : 1545658305,
+    "last_content_update" : 1545658305204,
     "path" : "C:/Users/martinidav/Desktop/Dissertation/workspace/tesi_text_mining.R",
     "project_path" : "tesi_text_mining.R",
     "properties" : {
-        "cursorPosition" : "23,25",
-        "scrollLine" : "0"
+        "cursorPosition" : "1145,10",
+        "scrollLine" : "1133"
     },
     "relative_order" : 1,
     "source_on_save" : false,
