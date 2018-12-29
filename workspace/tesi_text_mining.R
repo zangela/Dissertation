@@ -1,21 +1,17 @@
 rm(list=ls())
 
-
-
 # Chiamiamo i pacchetti necessari
 library(MASS)
 library(tidyverse)
-
-#carico le librerie necessarie
 library(tm)
-library(lsa)
+library(lsa) #pacchetto per le stopwords in più lingue
 library(caret)
 library(wordcloud)
 library(devtools) #installarla se necessario
 library (TextWiller)
 library(ggplot2) 
 require(tau)
-library(e1071)
+library(e1071) #svm tradizionale
 library(ggplot2) 
 library(SnowballC)
 library(kernlab) #svm online
@@ -118,6 +114,17 @@ for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 }
 rownames(datidef)=rn
 
+##################################################################
+#
+#                 SUDDIVISIONE IN STIMA E VERIFICA
+#
+##################################################################
+
+set.seed(123)
+campione= sample(1:nrow(datidef),800)# regola del 70-30 (per dati completi sarebbe 365000)
+campione
+ins.stima= datidef[campione,]			
+ins.ver = datidef[-campione,]
 
 ##################################################################
 #
@@ -136,18 +143,18 @@ rownames(datidef)=rn
 #1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
 ##################################################################
 
-freqass_y=table(datidef[,6])                               #calcolo freq assolute
+freqass_y=table(ins.stima[,6])                               #calcolo freq assolute
 freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
-barplot(table(datidef[,6])/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
+barplot(freqass_y/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
         ylim=(0:1), col=2:4, xlab="Codifica email")
 
 ##################################################################
 #2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) 
 ##################################################################
 
-freqass_in=table(datidef[,11]) #calcolo freq assolute
-barplot(table(datidef[,11])/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione tipologie di mittenti",
+freqass_in=table(ins.stima[,11]) #calcolo freq assolute
+barplot(freqass_in/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione per tipologia di mittente",
         ylim=(0:1), col=3:5)
 
 #0->esterni
@@ -161,24 +168,24 @@ no_stee_p=0
 no_stee_r=0
 no_stee_q=0
 
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(ins.stima))
 {
-  if (as.numeric(datidef[i,11])==1)  #Domini interni:
+  if (as.numeric(ins.stima[i,11])==1)  #Domini interni:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       stee_p=stee_p+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       stee_r=stee_r+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       stee_q=stee_q+1
   }
   else #Domini esterni:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       no_stee_p=no_stee_p+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       no_stee_r=no_stee_r+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       no_stee_q=no_stee_q+1
   }
 }
@@ -215,13 +222,13 @@ barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",yl
 
 #devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
 #calcoliamo quanto email in quarantena ci sono e lo salviamo in num_quarantene 
-conteggio=table(datidef[,5])
+conteggio=table(ins.stima[,5])
 num_quarantene=conteggio[[2]]
 
 freqass_sb=0
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(ins.stima))
 {
-  if ((as.numeric(datidef[i,6])==2) &&(as.numeric(datidef[i,14])==1))
+  if ((as.numeric(ins.stima[i,6])==2) &&(as.numeric(ins.stima[i,14])==1))
   {
     freqass_sb = freqass_sb+1
   }
@@ -229,15 +236,16 @@ for (i in 1:nrow(datidef))
 freqass_sb=(freqass_sb/num_quarantene)
 freqass_sb      #->sarebbe l'errore commesso da parte del Firewall
 par(mfrow=c(1,1))
+
 ##################################################################
 #4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
 ##################################################################
 
 #capire quante email vengono mandate nelle diverse fasce orarie; 
-freqass_fascia=table(datidef[,4]) #calcolo freq assolute
+freqass_fascia=table(ins.stima[,4]) #calcolo freq assolute
 freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
 
-barplot(table(datidef[,4])/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
+barplot(freqass_fascia/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
         ylim=(0:1), col=2:3)
 
 #=0 fascia notturna
@@ -257,24 +265,24 @@ ps1=0
 rj1=0
 qr1=0
 
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(ins.stima))
 {
-  if (as.numeric(datidef[i,4])==0)  #Fascia notturna:
+  if (as.numeric(ins.stima[i,4])==0)  #Fascia notturna:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       ps0=ps0+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rj0=rj0+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qr0=qr0+1
   }
   else #Fascia lavorativa:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       ps1=ps1+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rj1=rj1+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qr1=qr1+1
   }
 }
@@ -307,7 +315,7 @@ par(mfrow=c(1,1))
 ##################################################################
 
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
-freq_mese=table(datidef[,1])
+freq_mese=table(ins.stima[,1])
 
 k = sort(as.numeric(names(freq_mese)))
 f = matrix(0, nrow=1, ncol=length(freq_mese))
@@ -355,42 +363,42 @@ rjn=0
 qrn=0
 
 
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(ins.stima))
 {
-  if (as.numeric(datidef[i,1])==8)  #Agosto:
+  if (as.numeric(ins.stima[i,1])==8)  #Agosto:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       psa=psa+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rja=rja+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qra=qra+1
   }
-  else if (as.numeric(datidef[i,1])==9)  #Settembre:
+  else if (as.numeric(ins.stima[i,1])==9)  #Settembre:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       pss=pss+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rjs=rjs+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qrs=qrs+1
   }
-  else if (as.numeric(datidef[i,1])==10)  #Ottobre:
+  else if (as.numeric(ins.stima[i,1])==10)  #Ottobre:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       pso=pso+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rjo=rjo+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qro=qro+1
   }
   else #Novembre:
   {
-    if(as.numeric(datidef[i,6])==0) #passate 
+    if(as.numeric(ins.stima[i,6])==0) #passate 
       psn=psn+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
       rjn=rjn+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
       qrn=qrn+1
   }
   
@@ -438,6 +446,8 @@ barplot(ottobre, ylab="Frequenze relative", main="Distr Ottobre",ylim=(0:1), col
 barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), col=2:4)
 
 par(mfrow=c(1,1))
+
+
 ##################################################################
 #6)ANALISI SULLA DISTRIBUZIONE DELLE PASSATE
 ##################################################################
@@ -446,27 +456,27 @@ par(mfrow=c(1,1))
 
 int=0
 ext=0
-for (i in 1:nrow(datidef))
+for (i in 1:nrow(ins.stima))
 {
-  if (as.numeric(datidef[i,6])==0) #se email passata (tot ne ho 813->corretto)
+  if (as.numeric(ins.stima[i,6])==0) #se email passata (tot ne ho 813->corretto)
   {
-    if(as.numeric(datidef[i,11])==1)  #interne 
+    if(as.numeric(ins.stima[i,11])==1)  #interne 
       int=int+1
     else 
       ext=ext+1 #esterne 
   }
 }
 
-int_rel=int/sum(datidef[,6]==0)
-ext_rel=ext/sum(datidef[,6]==0)
+int_rel=int/sum(ins.stima[,6]==0)
+ext_rel=ext/sum(ins.stima[,6]==0)
 
 barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle email passate",ylim=(0:1), col=2:3)
 
 ##################################################################
 #
 #
-#                                   TEXT MINING
-#
+#                           TEXT MINING
+#                       nell'INSIEME DI STIMA
 #
 #
 ##################################################################
@@ -483,17 +493,17 @@ barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle ema
 
 
 ## Numero di caratteri per singolo oggetto
-nchars= sapply(as.vector(datidef[,12]),nchar) #(conta anche gli spazi)
+nchars= sapply(as.vector(ins.stima[,12]),nchar) #(conta anche gli spazi)
 nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per oggetto
 
-boxplot(nchars~datidef[,5],col=2:4, main="Distribuzione dei caratteri per tipologia di Y", ylab="Freq assolute")
+boxplot(nchars~ins.stima[,5],col=2:4, main="Distribuzione dei caratteri per tipologia di Y", ylab="Freq assolute")
 
 #0=passate
 #1=rigettate
 #2=quarantenat.test(nchars~tweets$soggettivo)
 
 ## Gestione emoticons  
-datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
+ins.stima[,12]=normalizzaemote(ins.stima[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
 length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
 print(grep("EMOTE",datidef[,12]) )
 #problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
@@ -501,42 +511,42 @@ print(grep("EMOTE",datidef[,12]) )
 
 
 # Normalizzazione del testo
-datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
+ins.stima[,12]=normalizzaTesti(ins.stima[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
 
-conteggi_caratteri=as.data.frame(attributes(datidef[,12])$counts)
+conteggi_caratteri=as.data.frame(attributes(ins.stima[,12])$counts)
 #problema: NON FUNZIONA!
 
 #Eliminare le stopwords
 #nota: molte parole std sono state eliminate da nomalizzaTesti (non trovo, a, il, lo,...)
-datidef[,12]=removeStopwords(datidef[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
+ins.stima[,12]=removeStopwords(ins.stima[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
+#stopwords ->Stopwordlists in German, English, Dutch, French, Polish, and Arab
+
 #ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole più frequenti. Per non sballare le statistiche credo sia opportuno toglierle
-datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
+ins.stima[,12]=removeNumbers(ins.stima[,12]) #vale quanto detto per re e rif sopra
 
 
 #Analisi degli n-grammi 
 #require(tau)
 
-bigrams = textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
+bigrams = textcnt(ins.stima[,12],method="string",n=2L,split="[[:blank:]]")
 sort(bigrams,decreasing=TRUE)[1:20]
 
 # trigrams = textcnt(datidef[,9],method="string",n=3L,split="[[:blank:]]")
 # sort(trigrams,decreasing=TRUE)[1:10]
 
 #se voglio creare degli insiemi di parole dati gli n grammi appena trovati
-datidef[,12] = gsub("assente ufficio", "assente_ufficio", datidef[,12])
-datidef[,12] = gsub("sessione disconnessa", "sessione_disconnessa", datidef[,12])
-datidef[,12] = gsub("purchase order", "purchase_order", datidef[,12])
-datidef[,12] = gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
-
-
-
+ins.stima[,12] = gsub("assente ufficio", "assente_ufficio", ins.stima[,12])
+ins.stima[,12] = gsub("sessione disconnessa", "sessione_disconnessa", ins.stima[,12])
+ins.stima[,12] = gsub("purchase order", "purchase_order", ins.stima[,12])
+ins.stima[,12] = gsub("ordine acquisto", "ordine_acquisto", ins.stima[,12])#etc
 
 ##################################################################
 #
 #
 #
 #   inizio CREAZIONE DEL DIZIONARIO NEL CASO ALLDEF.CSV
+#   questo ha senso crearlo sul tutto il dataset    
 #
 #
 #
@@ -638,7 +648,7 @@ dictionary
 #
 #
 #   inizio CREAZIONE DEI DOMINII NEL CASO ALLDEF.CSV
-#
+#   ha senso farlo su tutto il dataset
 #
 #
 ##################################################################
@@ -684,7 +694,7 @@ length(domain)
 #
 #
 #   inizio CREAZIONE DELLE MOTIVAZIONI NEL CASO ALLDEF.CSV
-# 
+#   ha senso farlo su tutto il dataset 
 #
 #
 ##################################################################
@@ -765,15 +775,15 @@ motivation
 
 
 #lo useremo come possibile predittore  futuro
-sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
+sent=sentiment(ins.stima[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 
 #unisco già in datidef due dei predittori che mi serviranno poi per svm->manca però conteggio_caratteri che non funziona
-datidef=cbind(datidef,sent,nchars)
+ins.stima=cbind(ins.stima,sent,nchars)
 
 #il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
 
-prop.table(table(datidef[,15],exclude = NULL)) #ci da la proporzione di sent
-barplot(table(datidef[,15]),col=2:4)
+prop.table(table(ins.stima[,15],exclude = NULL)) #ci da la proporzione di sent
+barplot(table(ins.stima[,15]),col=2:4, main="Proprorzione dei sent", xlab="Sent", ylab="Freq")
 
 ##################################################################
 #
@@ -855,17 +865,16 @@ svm_data <- function(type, vector, min, max)
   # SEMPLICE: creo objdef e domdef per le righe di datidef che vanno da min a max ;)
   if (type == 0) # calcolo di objdef
   {
-    cont = 0 
-    if(min == 1)
-      cont = 1
     
-    mat = matrix(0, nrow=(max-min + cont), ncol=length(dictionary))
+    
+    mat = matrix(0, nrow=(max-min + 1), ncol=length(dictionary))
     
     index = 0
-    for (i in 1:(max-min+cont))
+    for (i in 1:(max-min+1))
     {
       
-      obj = strsplit(toString(datidef[min +index, 12]), " ")
+      obj = strsplit(toString(ins.stima[min +index, 12]), " ") #datidef
+      
       for (j in 1:length(obj[[1]]))
       {
         obj[[1]][j] = wordStem(obj[[1]][j], language = "english")
@@ -898,18 +907,16 @@ svm_data <- function(type, vector, min, max)
   }
   else if (type == 1) # calcolo di domdef
   {
-    cont = 0 
-    if(min == 1)
-      cont = 1
     
-    mat = matrix(0, nrow=(max-min +cont), ncol=length(domain))
+    
+    mat = matrix(0, nrow=(max-min +1), ncol=length(domain))
     #if(min==1)->corretto che ci sia +1 nel primo for
     #altrimenti 
     
     index = 0
-    for (i in 1:(max-min+cont))
+    for (i in 1:(max-min+1))
     {
-      obj = as.matrix(as.character(datidef[min +index,8]))
+      obj = as.matrix(as.character(ins.stima[min +index,8]))#datidef
       for (k in 1:nrow(obj))
       {
         
@@ -929,18 +936,15 @@ svm_data <- function(type, vector, min, max)
   }
   else if (type == 2) # calcolo motivation
   {
-    cont = 0 
-    if(min == 1)
-      cont = 1
     
-    mat = matrix(0, nrow=(max-min +cont), ncol=length(motivation))
+    mat = matrix(0, nrow=(max-min +1), ncol=length(motivation))
     #if(min==1)->corretto che ci sia +1 nel primo for
     #altrimenti 
     
     index = 0
-    for (i in 1:(max-min+cont))
+    for (i in 1:(max-min+1))
     {
-      obj = as.matrix(as.character(datidef[min +index,13]))
+      obj = as.matrix(as.character(ins.stima[min +index,13]))#datidef
       for (k in 1:nrow(obj))
       {
         
@@ -961,384 +965,76 @@ svm_data <- function(type, vector, min, max)
   return(mat)
 }
 
-##################################################################  
-#
-#FINE FUNZIONE 
-#
-##################################################################
 
 
-##################################################################  
-#
-#CREAZIONE DELLA MATRICE DA DARE IN PASTO A SVM
-#
-##################################################################
+###########################################################
 
-
-mat_obj = svm_data(0, dictionary, 1,10) #per l'oggetto
-colnames(mat_obj)<-dictionary
-
-mat_dom=svm_data(1,domain, 1, 10) #per il dominio del mittente
-colnames(mat_dom)<-domain
-
-mat_mot=svm_data(2,motivation,1,10) #per motivation
-colnames(mat_mot)<-motivation #non gli piace
-
-matrice_svm=cbind(mat_obj,mat_dom,mat_mot,datidef[1:10,4], datidef[1:10,11],datidef[1:10,14],datidef[1:10,15],datidef[1:10,16]) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
-#fascia          #internal       #sbloccata        #sent           #nchars
-
-colnames(matrice_svm)[c(1757:1761)] <- c("fascia","internal","sbloccata","sentiment","nchars")
-
-
-##################################################################  
-#
-#
-#FINE CREAZIONE DELLA MATRICE DA DARE IN PASTO A SVM
-#si chiama ****matrice_svm****
-#
-##################################################################
-
-
-#svm tradizionale -> non è utilizzabile perchè non è quello che ci serve
-
-#y=as.factor(datidef[1:10,6])
-#model=svm(y ~., data = matrice_svm, scale = TRUE)
-
-#svm(x, y = NULL, scale = TRUE, type = NULL, kernel =
-#      "radial", degree = 3, gamma = if (is.vector(x)) 1 else 1 / ncol(x),
-#    coef0 = 0, cost = 1, nu = 0.5,
-#    class.weights = NULL, cachesize = 40, tolerance = 0.001, epsilon = 0.1,
-#    shrinking = TRUE, cross = 0, probability = FALSE, fitted = TRUE,
-#    ..., subset, na.action = na.omit)
-
-#x=dev'essere una matrice
-#y=var interesse
-#scale=rende a media nulla e varianza unitaria
-#type=default è una classificazione a c livelli
-#kernel=il tipo di kernel da usare
-#degree=serve se si sceglie un kernel polinomiale
-#gamma=necessario per tutti i kernel tranne il lineare. Default=1/(dimensione data)
-#cost=costante di regolarizzazione del moltiplicatore di lagrange. default=1
-#class.weights=a named vector of weights for the different classes, used for asymmetric class sizes. Not all factor levels have to be supplied (default weight: 1). All components have to be named. Specifying "inverse" will choose the weights inversely proportional to the class distribution.
-#epsilon= epsilon in the insensitive-loss function (default: 0.1)
-#shrinking=option whether to use the shrinking-heuristics (default: TRUE)
-#cross =if a integer value k>0 is specified, a k-fold cross validation on the training data is performed to assess the quality of the model: the accuracy rate for classification and the Mean Squared Error for regression
-
-#For multiclass-classification with k levels, k>2, libsvm uses the ‘one-against-one’-approach, in which k(k-1)/2 binary classifiers are trained; the appropriate class is found by a voting scheme.
-#plot.svm allows a simple graphical visualization of classification models.
-
-
-#dat=data.frame(objdef, datidef[,6])
-#plot(model,dat) ->dovrebbe mostrarmi l'iperpiano. nn lo fa xk ha 3 dimensioni
-
-
-#oss: se cerco di fare cross validation mi da errore e non stima il modello (cross=k) con k>0 par di lisciamento
-# summary(model)
-# 
-# pred <- predict(model,objdef)
-# system.time(pred <- predict(model,objdef))
-# table(as.integer(pred),datidef[,6])
-
-
-#svm tuned
-
-#cerco di lisciare il modello
-# tuned_parameters <- tune.svm((datidef[,6]~objdef), data =as.numeric(datidef))
-# 
-# svmTune <- tune(svm, train.x=x, train.y=y, kernel='radial',
-#                 ranges=list(cost=10^(-5:5), gamma=seq(0, 100, 0.5)),
-#                 class.weights=c('0'=numZeros/(numZeros+numOnes),
-#                                 '1'=numOnes/(numZeros+numOnes)))
-# 
-# 
-# 
-# #salvo il modello che darò in pasto al successivo set di dati								
-# saveRDS(model, file = "C:\\Users\\Angela\\Desktop\\rds\\model.rds") #percorso dove salvarlo.Mantenere la doppia \
-# 
-# #richiamo il modello salvato
-# model1=readRDS("C:\\Users\\Angela\\Desktop\\rds\\model.rds")
-# 
-# #cerco di partire dai valori ottenuti in precedenza e migliorarli
-# model1=svm(as.numeric(datidef[,6]) ~ objdef, data = objdef, scale = TRUE)
-# summary(model)
-# 
-# pred <- predict(model,objdef)
-# system.time(pred <- predict(model,objdef))
-# table(as.integer(pred),datidef[,6])
-
-
-##################################################################  
-
-
-#PROVA: LANCIO ALGORITMO SVM ONLINE
-
-
-################################################################## 
-
-#la nostra necessità è quella di lanciare un svm online: farlo allenare su diversi pezzi di dataset, facendo si che il modello si ricordi
-#quanto appreso in precedenza. Ecco perchè ONLINE
+#SVM ONLINE
 
 #LINK UTILE:
 #https://cran.r-project.org/web/packages/kernlab/vignettes/kernlab.pdf    ->LINK PAPAER
-
 
 #https://www.rdocumentation.org/packages/kernlab/versions/0.9-27/topics/onlearn     ->SPIEGAZIONE COMANDO ONLEARN
 
 #https://www.rdocumentation.org/packages/kernlab/versions/0.9-27/topics/inlearn     ->SPIEGAZIONE COMANDO INLEARN
 
-#An object is used to store the state of the algorithm at each iteration t this object is passed to the function as an argument 
-#and is returned at each iteration t+ 1 containing the model parameter state at this step.
-#An empty object of class onlearn is initialized using the inlearn function
+
+################################################################
 
 
-## create toy data set
-x <- rbind(matrix(rnorm(90),,2),matrix(rnorm(90)+3,,2))
-y <- matrix(c(rep(1,45),rep(-1,45)),,1)
-## initialize onlearn object
-on <- inlearn(2,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-on
-# 2 ->dimensione del dataset che dev'essere appreso
-# kernel ->decidere il tipo di kernel da utilizzare;quello qui è il kernel radiale
-#kpar ->the list of hyper-parameters (kernel parameters). In base al tipo di kernel ho una lista di parametri ad hoc
-#type ->the type of problem to be learned by the online algorithm
-#buffer=the size of the buffer to be used
-
-
-ind <- sample(1:90,90)
-## learn one data point at the time
-for(i in ind)
-  on <- onlearn(on,x[i,],y[i],nu=0.03,lambda=0.1)
-summary(on)
-#ON ->an object of class onlearn created by the initialization function inlearn containing the kernel to be used during learning and the parameters of the learned model
-#X ->Vector or matrix containing the data. Factors have to be numerically coded!!!!
-#Y  ->the class label in case of classification. Only binary classification is supported and class labels have to be -1 or +1.
-#NU ->the parameter similarly to the nu parameter in SVM bounds the training error.
-#LAMBDA ->the learning rate
-
-
-#The state of the algorithm is stored in an object of class onlearn and has to be passed to the function at each iteration.
-#The function returns an S4 object of class onlearn containing the model parameters and the last fitted value which can be retrieved by the accessor method fit. 
-#The value returned in the classification and novelty 
-#detection problem is the decision function value phi. The accessor methods alpha returns the model parameters.
-sign(predict(on,x))
-
-
-
-#PROVIAMO:
-#prime 10 righe
-
-prova <- inlearn(1761,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-prova
-ind <- c(1:10)
-## learn one data point at the time
-for(i in ind)
+col = length(dictionary)+length(domain)+length(motivation)+5
+model <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
+div = 11
+last = FALSE
+max_part = as.integer(nrow(ins.stima)/div)
+if (nrow(ins.stima)!=div*max_part)
 {
-  prova <- onlearn(prova,as.numeric(matrice_svm[i,]),as.numeric(datidef[i,6]),nu=0.03,lambda=0.1)
-  print(i)
-  
-}  
-summary(prova)
-sign(predict(prova,x))
-
-#seconde 10 righe
-
-mat_obj = svm_data(0, dictionary, 10,20) #per l'oggetto
-colnames(mat_obj)<-dictionary
-
-mat_dom=svm_data(1,domain, 10,20) #per il dominio del mittente
-colnames(mat_dom)<-domain
-
-mat_mot=svm_data(2,motivation,10,20) #per motivation
-colnames(mat_mot)<-motivation #non gli piace
-
-matrice_svm=cbind(mat_obj,mat_dom,mat_mot,datidef[1:10,4], datidef[1:10,11],datidef[1:10,14],datidef[1:10,15],datidef[1:10,16]) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
-#fascia          #internal       #sbloccata        #sent           #nchars
-
-colnames(matrice_svm)[c(1757:1761)] <- c("fascia","internal","sbloccata","sentiment","nchars")
-
-
-#prova <- inlearn(1761,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-#prova
-ind <- c(1:10)
-## learn one data point at the time
-for(i in ind)
+  max_part = max_part+1
+}
+if (max_part > 1)
 {
-  prova <- onlearn(prova,as.numeric(matrice_svm[i,]),as.numeric(datidef[i,6]),nu=0.03,lambda=0.1)
-  print(i)
-  
-}  
-summary(prova)
-sign(predict(prova,matrice_svm))
-
-
-################################################################## 
-
-#CICLO PER IMPLEMENTAZIONE SVM ONLINE
-#ancora da testare
-
-################################################################## 
-
-#creazione matrice in cui salvare gli output->va creata una sola volta
-output_modello <- inlearn(1761,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-output_modello
-step = 10
-min=1
-i=min
-max=step
-
-while(i<=nrow(datidef))
-{
-  if(min==1)
+  for (i in 1:max_part)
   {
-    #impotizziamo di fare 10 righe alla volta;per cui voglio scorrere tutte le righe di datidef, ma farlo a blocchi di 10
-    mat_obj = svm_data(0, dictionary, min,max) #per l'oggetto
-    colnames(mat_obj)<-dictionary
-    print(dim(mat_obj))
-    mat_dom=svm_data(1,domain, min,max) #per il dominio del mittente
-    colnames(mat_dom)<-domain
-    print(dim(mat_dom))
-    mat_mot=svm_data(2,motivation,min,max) #per motivation
-    colnames(mat_mot)<-motivation #non gli piace
-    print(dim(mat_mot))
-    matrice_svm=cbind(mat_obj,mat_dom,mat_mot,datidef[min:max,4], datidef[min:max,11],datidef[min:max,14],datidef[min:max,15],datidef[min:max,16]) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
-    #fascia          #internal       #sbloccata        #sent           #nchars
-    
-    colnames(matrice_svm)[c(1757:1761)] <- c("fascia","internal","sbloccata","sentiment","nchars")
-    k=min
-    while(k <= max)
+    if (i == 1)
     {
-      output_modello <- onlearn(output_modello,as.numeric(matrice_svm[k,]),as.numeric(datidef[k,6]),nu=0.03,lambda=0.1)
-      print(k)
-      k=k+1
-    }  
-    min=min+step
-    if((nrow(datidef)-max) <step)
-    {
-      max=nrow(datidef)    
+      min = 1
+      max = div
     }
-    
-    if((nrow(datidef)-max) >= step)
-      max=max+step
-    
-    i=i+1
-  }
-  else
-  {
-    count = 1
-    mat_obj = svm_data(0, dictionary, min,max+count) #per l'oggetto
-    colnames(mat_obj)<-dictionary
-    print(dim(mat_obj))
-    mat_dom=svm_data(1,domain, min,max+count) #per il dominio del mittente
-    colnames(mat_dom)<-domain
-    print(dim(mat_dom))
-    mat_mot=svm_data(2,motivation,min,max+count) #per motivation
-    colnames(mat_mot)<-motivation #non gli piace
-    print(dim(mat_mot))
-    matrice_svm=cbind(mat_obj,mat_dom,mat_mot,datidef[min:max,4], datidef[min:max,11],datidef[min:max,14],datidef[min:max,15],datidef[min:max,16]) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
-    #fascia          #internal       #sbloccata        #sent           #nchars
-    
-    colnames(matrice_svm)[c(1757:1761)] <- c("fascia","internal","sbloccata","sentiment","nchars")
-    k=1
-    while(k <= step)
+    else
     {
+      min = i*div+1
+      if(min > nrow(ins.stima))
+        break
+      max = (i+1)*div
+      if(max > nrow(ins.stima))
+        max = nrow(ins.stima)
       
-      output_modello <- onlearn(output_modello,as.numeric(matrice_svm[k,]),as.numeric(datidef[min,6]),nu=0.03,lambda=0.1)
-      print(k)
-      k=k+1
-      min=min+1
-    }  
+      print(min)
+      print(max)
+    }
+    matrice_svm=cbind(svm_data(0, dictionary, min,max),
+                      svm_data(1,domain, min,max),
+                      svm_data(2,motivation,min,max),
+                      as.numeric(ins.stima[min:max,4]),
+                      as.numeric(ins.stima[min:max,11]),
+                      as.numeric(ins.stima[min:max,14]),
+                      as.numeric(ins.stima[min:max,15]),
+                      as.numeric(ins.stima[min:max,16])) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
+    # #fascia          #internal       #sbloccata        #sent           #nchars
     
-    if((nrow(datidef)-max) >= step)
-      (max=max+step)
-    i=i+1
-    
-    if((nrow(datidef)-max) <step)
-      i=nrow(datidef)+1 #tralascio gli ultimi dati ed esco forzatamente dal ciclo   
-    
+    model <- onlearn(model,matrice_svm,y,nu=0.03,lambda=0.1) #da modificare nella verifica
     
   }
-  
-}
-
-
-
-
-
-
-
-
-
-
-################################################################## 
-
-#FINE CICLO PER IMPLEMENTAZIONE SVM ONLINE
-
-################################################################## 
-
-
-
-################################################################## 
-
-#CODICE ANCORA DA TESTARE
-
-################################################################## 
-
-
-
-
-
-
-
-
-# impostare indici del dataset per il trainig
-train_min = #impostare
-  train_max = #impostare
-  # impostare indici del dataset per la validation
-  validation_min = #impostare
-  validation_min = #impostare
-  # impostare indici del dataset per il test
-  test_min = #impostare
-  test_min = #impostare
-  train = FALSE
-tuning = FALSE
-
-while(train == FALSE)
+} else
 {
-  n_part = 50
-  part = as.integer(nrow(datidef)/n_part)
-  tmp = rep("", 0)
-  for (i in 1:(n_part+1))
-  {
-    # calcolare per ogni pezzo la matrice objdef per svm training 
-    objdef = svm_data(0, dictionary, min, max)
-    # calcolare per ogni pezzo la matrice domdef per svm training
-    domdef = svm_data(1, domain, min, max)
-    # allenare svm
-    svm_model <- svm() # impostare
-    train = TRUE
-  }
-  if (tuning == FALSE)
-  {
-    # calcolare per ogni pezzo la matrice objdef per svm validation 
-    objdef = svm_data(0, dictionary, min, max)
-    # calcolare per ogni pezzo la matrice domdef per svm validation
-    domdef = svm_data(1, domain, min, max)
-    # tuning svm
-    tune = tune.svm() #impostare
-    # parse dell'output per ottenere i valori migliori per svm
-    tune=strsplit() #impostare
-    #impostazione dei nuovi valori al modello svm
-    gamma = #impostare
-      cost = #impstare
-      kernel = #impostare
-      # etc.....
-      train = FALSE
-  }
+  model <- onlearn(model,matrice_svm,y,nu=0.03,lambda=0.1) 
+  sign(predict(model,matrice_svm))#*****************
 }
-# calcolare per ogni pezzo la matrice objdef per svm test 
-objdef = svm_data(0, dictionary, min, max)
-# calcolare per ogni pezzo la matrice domdef per svm test
-domdef = svm_data(1, domain, min, max)
+
+
+
+#to do: per calcolo dei valori previsi nell'insieme di verifica copiare il codice qui sopra usando ins.verifica e al posto della riga contrassegnata metterci ******
+
 
 # calcolo delle statistiche
 
@@ -1381,4 +1077,41 @@ ks
 
 
 
+##################################################################
+# #                     FREQUENZA PAROLE NELL'OGGETTO
+# ##################################################################
+# 
+#freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
+# 
+# #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
+# ord_obj = sort(freq_obj,decreasing=T)
+# top_six=(head(ord_obj)/sum(ord_obj))
+# 
+# wf = data.frame(word=names(ord_obj), freq=ord_obj)
+# p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
+# p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+# p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+# 
+# 
+# #Word Cloud
+# set.seed(123)
+# 
+# wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+# #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
+# 
+# ##################################################################
+# #                     FREQUENZA SENDER
+# ##################################################################
+# 
+# freq_send = colSums(sendomdef)
+# 
+# wf1 = data.frame(word=names(freq_send), freq=freq_send)
+# p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
+# p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
+# p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
+# p1
+# 
+# #Word Cloud
+# set.seed(123)
+# wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 
