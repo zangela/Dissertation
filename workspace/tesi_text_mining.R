@@ -4,7 +4,7 @@ rm(list=ls())
 library(MASS)
 library(tidyverse)
 library(tm)
-library(lsa) #pacchetto per le stopwords in più lingue
+library(lsa) #pacchetto per le stopwords in pi� lingue
 library(caret)
 library(wordcloud)
 library(devtools) #installarla se necessario
@@ -122,7 +122,6 @@ rownames(datidef)=rn
 
 set.seed(123)
 campione= sample(1:nrow(datidef),800)# regola del 70-30 (per dati completi sarebbe 365000)
-campione
 ins.stima= datidef[campione,]			
 ins.ver = datidef[-campione,]
 
@@ -507,7 +506,7 @@ ins.stima[,12]=normalizzaemote(ins.stima[,12])  #trasforma le emoticon in parole
 length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
 print(grep("EMOTE",datidef[,12]) )
 #problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
-#capire quanto è grave la cosa. Se produce risultati poco affidabili
+#capire quanto � grave la cosa. Se produce risultati poco affidabili
 
 
 # Normalizzazione del testo
@@ -522,7 +521,7 @@ conteggi_caratteri=as.data.frame(attributes(ins.stima[,12])$counts)
 ins.stima[,12]=removeStopwords(ins.stima[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
 #stopwords ->Stopwordlists in German, English, Dutch, French, Polish, and Arab
 
-#ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole più frequenti. Per non sballare le statistiche credo sia opportuno toglierle
+#ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole pi� frequenti. Per non sballare le statistiche credo sia opportuno toglierle
 ins.stima[,12]=removeNumbers(ins.stima[,12]) #vale quanto detto per re e rif sopra
 
 
@@ -630,7 +629,7 @@ for (i in 1:len)
 {
   dictionary[i]= colnfin[i]
 }
-dictionary
+length(dictionary)
 ##################################################################
 #
 #
@@ -718,7 +717,7 @@ for (i in 2:nrow(datidef))
     tmpmot[idx]=toString(allmot[i]) #salvo le motivation diverse in modo unico
   }
 }
-len = len -1 #ho tolto il primo carattere che è "" utilizzato per saltare tutti quelli vuoti
+len = len -1 #ho tolto il primo carattere che � "" utilizzato per saltare tutti quelli vuoti
 
 #creo un vettore che contiene tutti le motivation Diversi 
 motivation= character(len)
@@ -758,7 +757,7 @@ motivation
 # top_six=(head(ord_obj)/sum(ord_obj))
 # 
 # 
-# barplot(ord_obj, ylab="Frequenze assolute", main="Parole più frequenti nell'oggetto",ylim=(0:1), col=2)
+# barplot(ord_obj, ylab="Frequenze assolute", main="Parole pi� frequenti nell'oggetto",ylim=(0:1), col=2)
 # 
 # 
 # 
@@ -777,7 +776,7 @@ motivation
 #lo useremo come possibile predittore  futuro
 sent=sentiment(ins.stima[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 
-#unisco già in datidef due dei predittori che mi serviranno poi per svm->manca però conteggio_caratteri che non funziona
+#unisco gi� in datidef due dei predittori che mi serviranno poi per svm->manca per� conteggio_caratteri che non funziona
 ins.stima=cbind(ins.stima,sent,nchars)
 
 #il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
@@ -803,7 +802,7 @@ barplot(table(ins.stima[,15]),col=2:4, main="Proprorzione dei sent", xlab="Sent"
 # 
 # 
 # wf = data.frame(word=names(ord_obj), freq=ord_obj)
-# p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
+# p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
 # p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
 # p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
 # 
@@ -836,15 +835,10 @@ barplot(table(ins.stima[,15]),col=2:4, main="Proprorzione dei sent", xlab="Sent"
 #
 #
 #
-#   SVM: TODO 
-#   start
+#                             SVM
 #
 #
 ##################################################################
-
-#LINK UTILE
-#https://data-flair.training/blogs/e1071-in-r/
-
 
 ##################################################################  
 
@@ -860,7 +854,7 @@ svm_data <- function(type, vector, min, max)
   
   # la variabile vector contiene il dizionario di parole o di dominii in base al type
   
-  # min % max è il range di indice di datidef che vengono analizzati 
+  # min % max � il range di indice di datidef che vengono analizzati 
   # in una singola esecuzione per il calcolo degli input/output di svm
   # SEMPLICE: creo objdef e domdef per le righe di datidef che vanno da min a max ;)
   if (type == 0) # calcolo di objdef
@@ -910,9 +904,6 @@ svm_data <- function(type, vector, min, max)
     
     
     mat = matrix(0, nrow=(max-min +1), ncol=length(domain))
-    #if(min==1)->corretto che ci sia +1 nel primo for
-    #altrimenti 
-    
     index = 0
     for (i in 1:(max-min+1))
     {
@@ -925,7 +916,7 @@ svm_data <- function(type, vector, min, max)
         #print("ok")
         if (is.na(mittenti[[1]])==FALSE)
         {
-          #print(length(domain)) #domain è lungo 189
+          #print(length(domain)) #domain � lungo 189
           #print(ncol(mat))
           mat[i,mittenti]=1
         }
@@ -938,9 +929,6 @@ svm_data <- function(type, vector, min, max)
   {
     
     mat = matrix(0, nrow=(max-min +1), ncol=length(motivation))
-    #if(min==1)->corretto che ci sia +1 nel primo for
-    #altrimenti 
-    
     index = 0
     for (i in 1:(max-min+1))
     {
@@ -953,7 +941,7 @@ svm_data <- function(type, vector, min, max)
         #print("ok")
         if (is.na(motivazione[[1]])==FALSE)
         {
-          #print(length(domain)) #domain è lungo 189
+          #print(length(domain)) #domain � lungo 189
           #print(ncol(mat))
           mat[i,motivazione]=1
         }
@@ -982,19 +970,30 @@ svm_data <- function(type, vector, min, max)
 ################################################################
 
 
-col = length(dictionary)+length(domain)+length(motivation)+5
-model <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-div = 11
-last = FALSE
-max_part = as.integer(nrow(ins.stima)/div)
-if (nrow(ins.stima)!=div*max_part)
+col = length(dictionary)+length(domain)+length(motivation)+5 #+5=fascia+internal+sbloccata+sent+nchars
+
+y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
+for (K in 1: nrow(ins.stima))       # classificazione ONE vs ONE
 {
-  max_part = max_part+1
+  if (as.numeric(ins.stima[K,6])==0) #passate contro all
+  {
+    print(K)
+    y_binary[K,1]=1
+  }
+}
+model <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
+div = 11 #la dim del campione per ogni ciclo
+last = FALSE
+max_part = as.integer(nrow(ins.stima)/div) #numero massimo di cicli che dovr� fare
+if (nrow(ins.stima)!=div*max_part) 
+{
+  max_part = max_part+1             #aggiusto e porto da 72.72 a 73 per rendere intero il numero
 }
 if (max_part > 1)
 {
   for (i in 1:max_part)
   {
+    
     if (i == 1)
     {
       min = 1
@@ -1002,34 +1001,120 @@ if (max_part > 1)
     }
     else
     {
-      min = i*div+1
+      min = (i-1)*div+1
+      
       if(min > nrow(ins.stima))
         break
-      max = (i+1)*div
+      max = i*div
+      
       if(max > nrow(ins.stima))
         max = nrow(ins.stima)
       
       print(min)
       print(max)
     }
-    matrice_svm=cbind(svm_data(0, dictionary, min,max),
-                      svm_data(1,domain, min,max),
-                      svm_data(2,motivation,min,max),
-                      as.numeric(ins.stima[min:max,4]),
-                      as.numeric(ins.stima[min:max,11]),
-                      as.numeric(ins.stima[min:max,14]),
-                      as.numeric(ins.stima[min:max,15]),
-                      as.numeric(ins.stima[min:max,16])) #uniamo tutte le matrici e le colonne dei predittori da dare in pasto a svm
-    # #fascia          #internal       #sbloccata        #sent           #nchars
-    
-    model <- onlearn(model,matrice_svm,y,nu=0.03,lambda=0.1) #da modificare nella verifica
-    
-  }
-} else
+    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
+                      svm_data(1,domain, min,max),      #domain
+                      svm_data(2,motivation,min,max),   #motivation
+                      as.numeric(ins.stima[min:max,4]), #fascia
+                      as.numeric(ins.stima[min:max,11]),#internal
+                      as.numeric(ins.stima[min:max,14]),#sbloccata
+                      as.numeric(ins.stima[min:max,15]),#sent
+                      as.numeric(ins.stima[min:max,16])) #nchar
+    model <- onlearn(model,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
+  } 
+  
+} else #semmai dovessi avere un numero piccolisimo di oss:
 {
   model <- onlearn(model,matrice_svm,y,nu=0.03,lambda=0.1) 
   sign(predict(model,matrice_svm))#*****************
 }
+
+prev<-sign(predict(model,matrice_svm))
+
+
+for (i in 1: nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,6])==2) #quarantena contro all
+  {
+    y_binary[i,1]=1
+  }
+  
+}
+model <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
+div = 11 #la dim del campione per ogni ciclo
+last = FALSE
+max_part = as.integer(nrow(ins.stima)/div) #numero massimo di cicli che dovr� fare
+if (nrow(ins.stima)!=div*max_part) 
+{
+  max_part = max_part+1             #aggiusto e porto da 72.72 a 73 per rendere intero il numero
+}
+if (max_part > 1)
+{
+  for (i in 1:max_part)
+  {
+    
+    if (i == 1)
+    {
+      min = 1
+      max = div
+    }
+    else
+    {
+      min = (i-1)*div+1
+      
+      if(min > nrow(ins.stima))
+        break
+      max = i*div
+      
+      if(max > nrow(ins.stima))
+        max = nrow(ins.stima)
+      
+      print(min)
+      print(max)
+    }
+    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
+                      svm_data(1,domain, min,max),      #domain
+                      svm_data(2,motivation,min,max),   #motivation
+                      as.numeric(ins.stima[min:max,4]), #fascia
+                      as.numeric(ins.stima[min:max,11]),#internal
+                      as.numeric(ins.stima[min:max,14]),#sbloccata
+                      as.numeric(ins.stima[min:max,15]),#sent
+                      as.numeric(ins.stima[min:max,16])) #nchar
+    model <- onlearn(model,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
+  } 
+  
+} else #semmai dovessi avere un numero piccolisimo di oss:
+{
+  model <- onlearn(model,matrice_svm,y,nu=0.03,lambda=0.1) 
+  sign(predict(model,matrice_svm))#*****************
+}
+
+prev2<-sign(predict(model,matrice_svm))
+
+#########???da finire
+
+for (i in 1: nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,6])==1) #rigettate contro all
+  {
+    y_binary[i,1]=1
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1045,23 +1130,23 @@ https://www.r-bloggers.com/support-vector-machine-simplified-using-r/
   
   # Predict Target Label
   valX <-svm.validate[,4:61]
-pred <- predict(svm.tune, valX, type=”prob”)[2]
+pred <- predict(svm.tune, valX, type="prob")[2]
 
 # Model Performance Statistics
 pred_val <-prediction(pred[,2], svm.validate$Class)
 
 # Calculating Area under Curve
-perf_val <- performance(pred_val,”auc”)
+perf_val <- performance(pred_val,"auc")
 perf_val
 
 # Calculating True Positive and False Positive Rate
-perf_val <- performance(pred_val, “tpr”, “fpr”)
+perf_val <- performance(pred_val, "tpr", "fpr")
 
 # Plot the ROC curve
-plot(perf_val, col = “green”, lwd = 1.5)
+plot(perf_val, col = "green", lwd = 1.5)
 
 #Calculating KS statistics
-ks <- max(attr(perf_val, “y.values”)[[1]] – (attr(perf_val, “x.values”)[[1]]))
+ks <- max(attr(perf_val, "y.values")[[1]] - (attr(perf_val, "x.values")[[1]]))
 ks
 
 
@@ -1088,7 +1173,7 @@ ks
 # top_six=(head(ord_obj)/sum(ord_obj))
 # 
 # wf = data.frame(word=names(ord_obj), freq=ord_obj)
-# p = ggplot(subset(wf, freq>50), aes(word, freq)) #♣prendiamo quelle con freq>50
+# p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
 # p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
 # p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
 # 
