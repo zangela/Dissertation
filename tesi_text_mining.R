@@ -15,6 +15,8 @@ library(e1071) #svm tradizionale
 library(ggplot2) 
 library(SnowballC)
 library(kernlab) #svm online
+library(pROC) #!!!!!!!caricarla!!!!!
+source("lift-roc-tab.R")
 
 ##################################################################
 #
@@ -500,14 +502,6 @@ print(grep("EMOTE",datidef[,12]) )
 #problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
 #capire quanto Ã¨ grave la cosa. Se produce risultati poco affidabili
 
-
-## Gestione emoticons  
-datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
-length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
-print(grep("EMOTE",datidef[,12]) )
-#problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
-#capire quanto Ã¨ grave la cosa. Se produce risultati poco affidabili
-
 # Normalizzazione del testo
 datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
@@ -737,35 +731,6 @@ for (i in 1:len)
 #
 ##################################################################
 
-
-
-# ##################################################################
-# #                     ANALISI DELLE FREQUENZE
-# #                     non le posso lanciare xk troppo pesanti!!!!!!!!!
-# ##################################################################
-# 
-# 
-# #Avremo una matrice molto sparsa
-# 
-# #per avere la frequenza di ogni singola parola univoca:
-# freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
-# 
-# #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
-# ord_obj = sort(freq_obj,decreasing=T)
-# top_six=(head(ord_obj)/sum(ord_obj))
-# 
-# 
-# barplot(ord_obj, ylab="Frequenze assolute", main="Parole piÃ¹ frequenti nell'oggetto",ylim=(0:1), col=2)
-# 
-# 
-# 
-# farms %>% 
-#   ggplot(aes(x = as.data.frame(ord_obj)) +
-#            geom_bar())
-# 
-# 
-# 
-
 ##################################################################
 #                     ASSEGNAZIONE SENTIMENT
 ##################################################################
@@ -841,10 +806,15 @@ barplot(table(datidef[,16]),col=2:4, main="Proprorzione dei sent", xlab="Sent", 
 ##################################################################  
 
 
-#FUNZIONE CREA LE MATRICI DA DARE IN PASTO A SVM
+#                         CREAZIONE FUNZIONI 
 
 
 ##################################################################  
+
+
+################################################################## 
+#FUNZIONE CREA MATRICE DA DARE IN PASTO A SVM
+################################################################## 
 
 svm_data <- function(type, vector, min, max)
 {
@@ -951,14 +921,18 @@ svm_data <- function(type, vector, min, max)
   return(mat)
 }
 
-order_freq<-function(dictionary, freq_obj_tot)
+################################################################## 
+#FUNZIONE CALCOLA FREQUENZA PAROLE IN OBJ
+################################################################## 
+
+order_freq<-function(dictionary, freq_obj_tot) 
 {
   index = as.integer(1:length(dictionary))
   # ordino le frequenze in ordine decrescente
   for (i in 1:length(freq_obj_tot))
   {
     idxmax = which.max(freq_obj_tot[i:ncol(freq_obj_tot)])
-    idxmax = idxmax+i-1
+    idxmax = idxmax+i-1 #aggiustamento per considerare il max secondo i valori complessivi 
     freq = freq_obj_tot[i]
     freqid = index[i]
     freq_obj_tot[i]= freq_obj_tot[idxmax]
@@ -971,11 +945,15 @@ order_freq<-function(dictionary, freq_obj_tot)
   {
     colnames[i]=dictionary[index[i]]
   }
-  return(colnames)
+  colnames(freq_obj_tot)=colnames
+  return(freq_obj_tot)
 }
 
+################################################################## 
+#FUNZIONE CALCOLA PREVISIONI
+################################################################## 
 
-prediction<-function(max_part, ins.ver, div, model)
+prediction<-function(max_part, ins.ver, div, model) #funzione calcola previsioni nell'ins.verifica
 {
   if (max_part > 1)
   {
@@ -1006,9 +984,9 @@ prediction<-function(max_part, ins.ver, div, model)
                         svm_data(2,motivation,min,max),   #motivation
                         as.numeric(ins.ver[min:max,4]), #fascia
                         as.numeric(ins.ver[min:max,11]),#internal
-                        as.numeric(ins.ver[min:max,15]),#sbloccata
-                        as.numeric(ins.ver[min:max,16]),#sent
-                        as.numeric(ins.ver[min:max,17]) #nchar
+                        as.numeric(ins.ver[min:max,11]),#sbloccata
+                        as.numeric(ins.ver[min:max,15]),#sent
+                        as.numeric(ins.ver[min:max,16]) #nchar
       )
       tmp=sign(predict(model,matrice_svm))
       prev[1,min:max]=tmp
@@ -1017,7 +995,11 @@ prediction<-function(max_part, ins.ver, div, model)
   }
 }
 
-train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
+################################################################## 
+#FUNZIONE ALLENA IL MODELLO
+################################################################## 
+
+train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model) #funzione per allenare il modello
 {
   for (i in 1:max_part)
   {
@@ -1043,9 +1025,9 @@ train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
                       svm_data(2,motivation,min,max),   #motivation
                       as.numeric(ins.stima[min:max,4]), #fascia
                       as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,15]),#sbloccata
-                      as.numeric(ins.stima[min:max,16]),#sent
-                      as.numeric(ins.stima[min:max,17]) #nchar
+                      as.numeric(ins.stima[min:max,14]),#sbloccata
+                      as.numeric(ins.stima[min:max,15]),#sent
+                      as.numeric(ins.stima[min:max,16]) #nchar
     )
     model <- onlearn(model_pass,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
   }
@@ -1129,7 +1111,7 @@ if (nrow(ins.stima)!=div*max_part)
 }
 if (max_part > 1)
 {
-  model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua)
+  model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua) #chiamo funzione creata prima
 }
 prev_qua = prediction(max_part, ins.ver, div, model_qua)
 
@@ -1145,7 +1127,7 @@ for (i in 1: nrow(ins.stima))
   
 }
 freq_obj=matrix(0,1,ncol=length(dictionary))
-freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salverò tutti i conteggi dei vari cicli
+freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salverò tutti i conteggi dei vari cicli. utilizzerò per grafico frequenze
 
 model_rig <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
 div = 10 #la dim del campione per ogni ciclo
@@ -1180,9 +1162,9 @@ if (max_part > 1)
                       svm_data(2,motivation,min,max),   #motivation
                       as.numeric(ins.stima[min:max,4]), #fascia
                       as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,15]),#sbloccata
-                      as.numeric(ins.stima[min:max,16]),#sent
-                      as.numeric(ins.stima[min:max,17])) #nchar
+                      as.numeric(ins.stima[min:max,14]),#sbloccata
+                      as.numeric(ins.stima[min:max,15]),#sent
+                      as.numeric(ins.stima[min:max,16])) #nchar
     #aggiungo il contatore
     if (nrow(matrice_svm)>1)
     {
@@ -1194,20 +1176,16 @@ if (max_part > 1)
       freq_obj=matrice_svm[,1:length(dictionary)]
       freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
     }
-    #freq_send = colSums(matrice_svm[,length(dictionary):(ncol(matrice_svm)-11)]) #sarebbe da lanciare su dtm
     
-    #ord_send = sort(freq_send,decreasing=T)
-    #top_six_s=(head(ord_send)/sum(ord_send))
-    #D2 <- D[c(as.numeric(order(D[1, ], decreasing = TRUE)))]
     model_rig <- onlearn(model_rig,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
   } 
 }
 
 freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
 #uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
-colnames(freq_obj_tot)=order_freq(dictionary, freq_obj_tot)
 
-prev_rig = prediction(max_part, ins.ver, div, model_rig)
+
+prev_rig = prediction(max_part, ins.ver, div, model_rig) #previsioni nell'ins.verifica
 
 
 ####################
@@ -1215,48 +1193,73 @@ prev_rig = prediction(max_part, ins.ver, div, model_rig)
 ####################
 
 
+#######################################################################
 
-#to do: per calcolo dei valori previsi nell'insieme di verifica copiare il codice qui sopra usando ins.verifica e al posto della riga contrassegnata metterci ******
+#             ANALISI GRAFICHE SULLE FREQUENZE
+
+#######################################################################
+
+#######################################################################
+#                       OBJ
+#######################################################################
+
+#matrice calcolata dentro al ciclo
+freq_obj_tot=order_freq(dictionary, freq_obj_tot)
+
+wf = data.frame(word=colnames(freq_obj_tot), freq=freq_obj_tot)
+p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
+p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue")
+p = p + theme(axis.text.x=element_text(angle=45, hjust=1))
+
+#Word Cloud
+set.seed(123)
+wordcloud(colnames(freq_obj_tot), freq_obj_tot, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 
 
-# calcolo delle statistiche
 
 
-# Codice from 
-https://www.r-bloggers.com/support-vector-machine-simplified-using-r/
+#######################################################################
+#                       DOMINI SENDER
+#######################################################################
+
+
+#######################################################################
+
+#             VALUTAZIONE PERFORMANCE MODELLO
+
+#######################################################################
+
+
+#MODELLO RIGETTATE VS ALL
+
+prev_rig = prediction(max_part, ins.ver, div, model_rig) #previsioni nell'ins.verifica
+#Devo rendere anche y in ins.ver binaria per i tre casi:
+
+y_ver<-matrix(-1,nrow=nrow(ins.ver),1)
+for (i in 1: nrow(ins.ver))
+{
+  if (as.numeric(ins.ver[i,6])==1) #rigettate contro all
+  {
+    y_ver[i,1]=1
+  }
   
-  
-# Predict Target Label
-valX <-svm.validate[,4:61]
-pred <- predict(svm.tune, valX, type="prob")[2]
+}
+#tabella.sommario(previsioni >0, y_ver)
+tabella.sommario(prev_rig >0, y_ver)
+#restituisce matrice di confusione
+#disegno la curva ROC
 
-# Model Performance Statistics
-pred_val <-prediction(pred[,2], svm.validate$Class)
-
-# Calculating Area under Curve
-perf_val <- performance(pred_val,"auc")
-perf_val
-
-# Calculating True Positive and False Positive Rate
-perf_val <- performance(pred_val, "tpr", "fpr")
-
-# Plot the ROC curve
-plot(perf_val, col = "green", lwd = 1.5)
-
-#Calculating KS statistics
-ks <- max(attr(perf_val, "y.values")[[1]] - (attr(perf_val, "x.values")[[1]]))
-ks
+plot.roc(as.numeric(y_ver), as.numeric(prev_rig), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
+#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
+auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_rig))[1]
+auc.lineare
 
 
-##################################################################
-#
-#
-#
-#   SVM: TODO 
-#   end
-#
-#
-##################################################################
+
+
+
+
+
 
 
 
