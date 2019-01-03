@@ -29,9 +29,10 @@ library(kernlab) #svm online
 # ##################################################################
 
 dati=read.csv(file.choose(), header = TRUE, sep = ";", quote = "\"",dec = ".", encoding = "UTF-8")
-column=ncol(dati)+7 
+column=ncol(dati)+7
+colnames(dati)
 datidef = matrix(0,nrow=nrow(dati), ncol=column) #ora creiamo la matrice con cui lavoreremo in seguito
-colnames(datidef)=c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Motivation", "Sbloccata")
+colnames(datidef)=c("Mese", "Giorno","Ora","Fascia","Y","Y_cod","NameSender","DomainSender","NameReceiver","DomainReceiver","Internal","Obj","Extra","Motivation", "Sbloccata")
 for (i in 1:nrow(dati))
 {
   print(i)
@@ -105,6 +106,7 @@ for (i in 1:nrow(dati))
     }
   }
 }
+
 rn = rep(0,nrow(datidef))
 for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 {
@@ -114,16 +116,7 @@ for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 }
 rownames(datidef)=rn
 
-##################################################################
-#
-#                 SUDDIVISIONE IN STIMA E VERIFICA
-#
-##################################################################
 
-set.seed(123)
-campione= sample(1:nrow(datidef),as.integer(nrow(datidef)*0.7))# regola del 70-30 (per dati completi sarebbe 365000)
-ins.stima= datidef[campione,]			
-ins.ver = datidef[-campione,]
 
 ##################################################################
 #
@@ -142,7 +135,7 @@ ins.ver = datidef[-campione,]
 #1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
 ##################################################################
 
-freqass_y=table(ins.stima[,6])                               #calcolo freq assolute
+freqass_y=table(datidef[,6])                               #calcolo freq assolute
 freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
 
 barplot(freqass_y/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
@@ -152,7 +145,7 @@ barplot(freqass_y/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione
 #2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) 
 ##################################################################
 
-freqass_in=table(ins.stima[,11]) #calcolo freq assolute
+freqass_in=table(datidef[,11]) #calcolo freq assolute
 barplot(freqass_in/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione per tipologia di mittente",
         ylim=(0:1), col=3:5)
 
@@ -167,24 +160,24 @@ no_stee_p=0
 no_stee_r=0
 no_stee_q=0
 
-for (i in 1:nrow(ins.stima))
+for (i in 1:nrow(datidef))
 {
-  if (as.numeric(ins.stima[i,11])==1)  #Domini interni:
+  if (as.numeric(datidef[i,11])==1)  #Domini interni:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       stee_p=stee_p+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       stee_r=stee_r+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       stee_q=stee_q+1
   }
   else #Domini esterni:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       no_stee_p=no_stee_p+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       no_stee_r=no_stee_r+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       no_stee_q=no_stee_q+1
   }
 }
@@ -221,12 +214,12 @@ barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",yl
 
 #devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
 #calcoliamo quanto email in quarantena ci sono e lo salviamo in num_quarantene 
-conteggio=table(ins.stima[,5])
+conteggio=table(datidef[,5])
 num_quarantene=conteggio[[2]]
 freqass_sb=0
-for (i in 1:nrow(ins.stima))
+for (i in 1:nrow(datidef))
 {
-  if ((as.numeric(ins.stima[i,6])==2) & (as.numeric(ins.stima[i,15])==1))
+  if ((as.numeric(datidef[i,6])==2) & (as.numeric(datidef[i,16])==1))
   {
     freqass_sb = freqass_sb+1
   }
@@ -240,7 +233,7 @@ par(mfrow=c(1,1))
 ##################################################################
 
 #capire quante email vengono mandate nelle diverse fasce orarie; 
-freqass_fascia=table(ins.stima[,4]) #calcolo freq assolute
+freqass_fascia=table(datidef[,4]) #calcolo freq assolute
 freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
 
 barplot(freqass_fascia/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
@@ -263,24 +256,24 @@ ps1=0
 rj1=0
 qr1=0
 
-for (i in 1:nrow(ins.stima))
+for (i in 1:nrow(datidef))
 {
-  if (as.numeric(ins.stima[i,4])==0)  #Fascia notturna:
+  if (as.numeric(datidef[i,4])==0)  #Fascia notturna:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       ps0=ps0+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rj0=rj0+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qr0=qr0+1
   }
   else #Fascia lavorativa:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       ps1=ps1+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rj1=rj1+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qr1=qr1+1
   }
 }
@@ -313,7 +306,7 @@ par(mfrow=c(1,1))
 ##################################################################
 
 #capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
-freq_mese=table(ins.stima[,1])
+freq_mese=table(datidef[,1])
 
 k = sort(as.numeric(names(freq_mese)))
 f = matrix(0, nrow=1, ncol=length(freq_mese))
@@ -361,42 +354,42 @@ rjn=0
 qrn=0
 
 
-for (i in 1:nrow(ins.stima))
+for (i in 1:nrow(datidef))
 {
-  if (as.numeric(ins.stima[i,1])==8)  #Agosto:
+  if (as.numeric(datidef[i,1])==8)  #Agosto:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       psa=psa+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rja=rja+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qra=qra+1
   }
-  else if (as.numeric(ins.stima[i,1])==9)  #Settembre:
+  else if (as.numeric(datidef[i,1])==9)  #Settembre:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       pss=pss+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rjs=rjs+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qrs=qrs+1
   }
-  else if (as.numeric(ins.stima[i,1])==10)  #Ottobre:
+  else if (as.numeric(datidef[i,1])==10)  #Ottobre:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       pso=pso+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rjo=rjo+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qro=qro+1
   }
   else #Novembre:
   {
-    if(as.numeric(ins.stima[i,6])==0) #passate 
+    if(as.numeric(datidef[i,6])==0) #passate 
       psn=psn+1
-    if(as.numeric(ins.stima[i,6])==1) #rigettate
+    if(as.numeric(datidef[i,6])==1) #rigettate
       rjn=rjn+1
-    if (as.numeric(ins.stima[i,6])==2) #quarantene
+    if (as.numeric(datidef[i,6])==2) #quarantene
       qrn=qrn+1
   }
   
@@ -454,19 +447,19 @@ par(mfrow=c(1,1))
 
 int=0
 ext=0
-for (i in 1:nrow(ins.stima))
+for (i in 1:nrow(datidef))
 {
-  if (as.numeric(ins.stima[i,6])==0) #se email passata (tot ne ho 813->corretto)
+  if (as.numeric(datidef[i,6])==0) #se email passata (tot ne ho 813->corretto)
   {
-    if(as.numeric(ins.stima[i,11])==1)  #interne 
+    if(as.numeric(datidef[i,11])==1)  #interne 
       int=int+1
     else 
       ext=ext+1 #esterne 
   }
 }
 
-int_rel=int/sum(ins.stima[,6]==0)
-ext_rel=ext/sum(ins.stima[,6]==0)
+int_rel=int/sum(datidef[,6]==0)
+ext_rel=ext/sum(datidef[,6]==0)
 
 barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle email passate",ylim=(0:1), col=2:3)
 
@@ -491,53 +484,59 @@ barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle ema
 
 
 ## Numero di caratteri per singolo oggetto
-nchars= sapply(as.vector(ins.stima[,12]),nchar) #(conta anche gli spazi)
+nchars= sapply(as.vector(datidef[,12]),nchar) #(conta anche gli spazi)
 nchars=as.vector(nchars) #creo un vettore con i numeri di caratteri per oggetto
 
-boxplot(nchars~ins.stima[,5],col=2:4, main="Distribuzione dei caratteri per tipologia di Y", ylab="Freq assolute")
+boxplot(nchars~datidef[,5],col=2:4, main="Distribuzione dei caratteri per tipologia di Y", ylab="Freq assolute")
 
 #0=passate
 #1=rigettate
 #2=quarantenat.test(nchars~tweets$soggettivo)
 
 ## Gestione emoticons  
-ins.stima[,12]=normalizzaemote(ins.stima[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
+datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
 length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
 print(grep("EMOTE",datidef[,12]) )
 #problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
 #capire quanto è grave la cosa. Se produce risultati poco affidabili
 
 
+## Gestione emoticons  
+datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
+length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
+print(grep("EMOTE",datidef[,12]) )
+#problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
+#capire quanto è grave la cosa. Se produce risultati poco affidabili
+
 # Normalizzazione del testo
-ins.stima[,12]=normalizzaTesti(ins.stima[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
+datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
 
-conteggi_caratteri=as.data.frame(attributes(ins.stima[,12])$counts)
+conteggi_caratteri=as.data.frame(attributes(datidef[,12])$counts)
 #problema: NON FUNZIONA!
 
 #Eliminare le stopwords
 #nota: molte parole std sono state eliminate da nomalizzaTesti (non trovo, a, il, lo,...)
-ins.stima[,12]=removeStopwords(ins.stima[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
+datidef[,12]=removeStopwords(datidef[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
 #stopwords ->Stopwordlists in German, English, Dutch, French, Polish, and Arab
 
 #ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole più frequenti. Per non sballare le statistiche credo sia opportuno toglierle
-ins.stima[,12]=removeNumbers(ins.stima[,12]) #vale quanto detto per re e rif sopra
-
+datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
 
 #Analisi degli n-grammi 
 #require(tau)
 
-bigrams = textcnt(ins.stima[,12],method="string",n=2L,split="[[:blank:]]")
+bigrams = textcnt(datidef[,12],method="string",n=2L,split="[[:blank:]]")
 sort(bigrams,decreasing=TRUE)[1:20]
 
 # trigrams = textcnt(datidef[,9],method="string",n=3L,split="[[:blank:]]")
 # sort(trigrams,decreasing=TRUE)[1:10]
 
 #se voglio creare degli insiemi di parole dati gli n grammi appena trovati
-ins.stima[,12] = gsub("assente ufficio", "assente_ufficio", ins.stima[,12])
-ins.stima[,12] = gsub("sessione disconnessa", "sessione_disconnessa", ins.stima[,12])
-ins.stima[,12] = gsub("purchase order", "purchase_order", ins.stima[,12])
-ins.stima[,12] = gsub("ordine acquisto", "ordine_acquisto", ins.stima[,12])#etc
+datidef[,12] = gsub("assente ufficio", "assente_ufficio", datidef[,12])
+datidef[,12] = gsub("sessione disconnessa", "sessione_disconnessa", datidef[,12])
+datidef[,12] = gsub("purchase order", "purchase_order", datidef[,12])
+datidef[,12] = gsub("ordine acquisto", "ordine_acquisto", datidef[,12])#etc
 
 ##################################################################
 #
@@ -699,7 +698,7 @@ for (i in 1:len)
 
 #ottengo tutti i motivation
 len = 0
-allmot=datidef[,13]
+allmot=datidef[,14]
 #motivation in ordine alfabetico
 allmot= sort(allmot)
 #conto e mi salvo tutte le motivation diverse
@@ -773,15 +772,15 @@ for (i in 1:len)
 
 
 #lo useremo come possibile predittore  futuro
-sent=sentiment(ins.stima[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
+sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 
 #unisco già in datidef due dei predittori che mi serviranno poi per svm->manca però conteggio_caratteri che non funziona
-ins.stima=cbind(ins.stima,sent,nchars)
+datidef=cbind(datidef,sent,nchars)
 
 #il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
 
-prop.table(table(ins.stima[,15],exclude = NULL)) #ci da la proporzione di sent
-barplot(table(ins.stima[,15]),col=2:4, main="Proprorzione dei sent", xlab="Sent", ylab="Freq")
+prop.table(table(datidef[,16],exclude = NULL)) #ci da la proporzione di sent
+barplot(table(datidef[,16]),col=2:4, main="Proprorzione dei sent", xlab="Sent", ylab="Freq")
 
 ##################################################################
 #
@@ -931,7 +930,7 @@ svm_data <- function(type, vector, min, max)
     index = 0
     for (i in 1:(max-min+1))
     {
-      obj = as.matrix(as.character(ins.stima[min +index,13]))#datidef
+      obj = as.matrix(as.character(ins.stima[min +index,14]))#datidef
       for (k in 1:nrow(obj))
       {
         
@@ -951,6 +950,122 @@ svm_data <- function(type, vector, min, max)
   }
   return(mat)
 }
+
+order_freq<-function(dictionary, freq_obj_tot)
+{
+  index = as.integer(1:length(dictionary))
+  # ordino le frequenze in ordine decrescente
+  for (i in 1:length(freq_obj_tot))
+  {
+    idxmax = which.max(freq_obj_tot[i:ncol(freq_obj_tot)])
+    idxmax = idxmax+i-1
+    freq = freq_obj_tot[i]
+    freqid = index[i]
+    freq_obj_tot[i]= freq_obj_tot[idxmax]
+    index[i]= index[idxmax]
+    freq_obj_tot[idxmax]=freq
+    index[idxmax]=freqid
+  }
+  colnames = character(length(freq_obj_tot))
+  for (i in 1:length(dictionary))
+  {
+    colnames[i]=dictionary[index[i]]
+  }
+  return(colnames)
+}
+
+
+prediction<-function(max_part, ins.ver, div, model)
+{
+  if (max_part > 1)
+  {
+    prev = matrix(0,1,nrow(ins.ver))
+    #predict in tutto il dataset
+    
+    for (i in 1:max_part)
+    {
+      
+      if (i == 1)
+      {
+        min = 1
+        max = div
+      }
+      else
+      {
+        min = (i-1)*div+1
+        
+        if(min > nrow(ins.ver))
+          break
+        max = i*div
+        
+        if(max > nrow(ins.ver))
+          max = nrow(ins.ver)
+      }
+      matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
+                        svm_data(1,domain, min,max),     #domain
+                        svm_data(2,motivation,min,max),   #motivation
+                        as.numeric(ins.ver[min:max,4]), #fascia
+                        as.numeric(ins.ver[min:max,11]),#internal
+                        as.numeric(ins.ver[min:max,15]),#sbloccata
+                        as.numeric(ins.ver[min:max,16]),#sent
+                        as.numeric(ins.ver[min:max,17]) #nchar
+      )
+      tmp=sign(predict(model,matrice_svm))
+      prev[1,min:max]=tmp
+    }
+    return(prev)
+  }
+}
+
+train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
+{
+  for (i in 1:max_part)
+  {
+    
+    if (i == 1)
+    {
+      min = 1
+      max = div
+    }
+    else
+    {
+      min = (i-1)*div+1
+      
+      if(min > nrow(ins.stima))
+        break
+      max = i*div
+      
+      if(max > nrow(ins.stima))
+        max = nrow(ins.stima)
+    }
+    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
+                      svm_data(1,domain, min,max),     #domain
+                      svm_data(2,motivation,min,max),   #motivation
+                      as.numeric(ins.stima[min:max,4]), #fascia
+                      as.numeric(ins.stima[min:max,11]),#internal
+                      as.numeric(ins.stima[min:max,15]),#sbloccata
+                      as.numeric(ins.stima[min:max,16]),#sent
+                      as.numeric(ins.stima[min:max,17]) #nchar
+    )
+    model <- onlearn(model_pass,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
+  }
+  return(model)
+}
+
+
+
+
+
+##################################################################
+#
+#                 SUDDIVISIONE IN STIMA E VERIFICA
+#
+##################################################################
+
+set.seed(123)
+campione= sample(1:nrow(datidef),as.integer(nrow(datidef)*0.7))# regola del 70-30 (per dati completi sarebbe 365000)
+ins.stima= datidef[campione,]			
+ins.ver = datidef[-campione,]
 
 
 
@@ -989,44 +1104,10 @@ if (nrow(ins.stima)!=div*max_part)
 }
 if (max_part > 1)
 {
-  for (i in 1:max_part)
-  {
-    
-    if (i == 1)
-    {
-      min = 1
-      max = div
-    }
-    else
-    {
-      min = (i-1)*div+1
-      
-      if(min > nrow(ins.stima))
-        break
-      max = i*div
-      
-      if(max > nrow(ins.stima))
-        max = nrow(ins.stima)
-    }
-    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
-                      svm_data(1,domain, min,max),     #domain
-                      svm_data(2,motivation,min,max),   #motivation
-                      as.numeric(ins.stima[min:max,4]), #fascia
-                      as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,15]),#sbloccata
-                      as.numeric(ins.stima[min:max,16]),#sent
-                      as.numeric(ins.stima[min:max,17]) #nchar
-    )
-    model_pass <- onlearn(model_pass,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
-  } 
-  
-} else #semmai dovessi avere un numero piccolisimo di oss:
-{
-  model_pass <- onlearn(model_pass,matrice_svm,y,nu=0.03,lambda=0.1) 
-  sign(predict(model_pass,matrice_svm))#*****************
+   model_pass= train(max_part, div, ins.stima, dictionary, domain, motivation, model_pass)
 }
 
-prev_pass<-sign(predict(model_pass,matrice_svm))
+prev_pass = prediction(max_part, ins.ver, div, model_pass)
 
 #################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
@@ -1048,66 +1129,10 @@ if (nrow(ins.stima)!=div*max_part)
 }
 if (max_part > 1)
 {
-  for (i in 1:max_part)
-  {
-    
-    if (i == 1)
-    {
-      min = 1
-      max = div
-    }
-    else
-    {
-      min = (i-1)*div+1
-      
-      if(min > nrow(ins.stima))
-        break
-      max = i*div
-      if(max > nrow(ins.stima))
-        max = nrow(ins.stima)
-    }
-    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
-                      svm_data(1,domain, min,max),      #domain
-                      svm_data(2,motivation,min,max),   #motivation
-                      as.numeric(ins.stima[min:max,4]), #fascia
-                      as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,15]),#sbloccata
-                      as.numeric(ins.stima[min:max,16]),#sent
-                      as.numeric(ins.stima[min:max,17])) #nchar
-    model_qua <- onlearn(model_qua,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
-  } 
-  
-} else #semmai dovessi avere un numero piccolisimo di oss:
-{
-  model_qua <- onlearn(model_qua,matrice_svm,y,nu=0.03,lambda=0.1) 
-  sign(predict(model_qua,matrice_svm))#*****************
+  model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua)
 }
-prev_qua = matrix(0,1,nrow(ins.ver))
-#predict in tutto il dataset
-if (max_part > 1)
-{
-  for (i in 1:max_part)
-  {
-    
-    if (i == 1)
-    {
-      min = 1
-      max = div
-    }
-    else
-    {
-      min = (i-1)*div+1
-      
-      if(min > nrow(ins.ver))
-        break
-      max = i*div
-      if(max > nrow(ins.ver))
-        max = nrow(ins.ver)
-    }
-    tmp=sign(predict(model_qua,matrice_svm))
-    prev_qua[1,min:max]=tmp
-  }
-}
+prev_qua = prediction(max_part, ins.ver, div, model_qua)
+
 
 #################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
@@ -1174,69 +1199,15 @@ if (max_part > 1)
     #ord_send = sort(freq_send,decreasing=T)
     #top_six_s=(head(ord_send)/sum(ord_send))
     #D2 <- D[c(as.numeric(order(D[1, ], decreasing = TRUE)))]
-    
     model_rig <- onlearn(model_rig,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
   } 
-  
-} else #semmai dovessi avere un numero piccolisimo di oss:
-{
-  model_rig <- onlearn(model_rig,matrice_svm,y,nu=0.03,lambda=0.1) 
-  sign(predict(model_rig,matrice_svm))#*****************
 }
 
 freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
 #uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
+colnames(freq_obj_tot)=order_freq(dictionary, freq_obj_tot)
 
-index = as.integer(1:length(dictionary))
-# ordino le frequenze in ordine decrescente
-for (i in 1:length(freq_obj_tot))
-{
-  idxmax = which.max(freq_obj_tot[i:ncol(freq_obj_tot)])
-  idxmax = idxmax+i-1
-  freq = freq_obj_tot[i]
-  freqid = index[i]
-  freq_obj_tot[i]= freq_obj_tot[idxmax]
-  index[i]= index[idxmax]
-  freq_obj_tot[idxmax]=freq
-  index[idxmax]=freqid
-}
-colnames = character(length(freq_obj_tot))
-for (i in 1:length(dictionary))
-{
-  colnames[i]=dictionary[index[i]]
-}
-colnames(freq_obj_tot)=colnames
-
-prev_rig = matrix(0,1,nrow(ins.ver))
-#predict in tutto il dataset
-if (max_part > 1)
-{
-  for (i in 1:max_part)
-  {
-    
-    if (i == 1)
-    {
-      min = 1
-      max = div
-    }
-    else
-    {
-      min = (i-1)*div+1
-      
-      if(min > nrow(ins.ver))
-        break
-      max = i*div
-      if(max > nrow(ins.ver))
-        max = nrow(ins.ver)
-    }
-    tmp=sign(predict(model_rig,matrice_svm))
-    prev_rig[1,min:max]=tmp
-  }
-}
-
-
-
-
+prev_rig = prediction(max_part, ins.ver, div, model_rig)
 
 
 ####################
