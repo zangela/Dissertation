@@ -1139,6 +1139,36 @@ print(prev_pass[x])
 x = which.min(prev_pass)
 print(prev_pass[x])
 
+##############################################
+
+#CALCOLO SOGLIA p*
+
+##############################################
+
+y_ver<-matrix(-1,nrow=nrow(datidef),1)
+for (k in 1: nrow(datidef))       # 
+{
+  if (as.numeric(datidef[k,6])==0) #passate contro all
+  {
+    y_ver[k,1]=1
+  }
+}
+#calcolo le frequenze in base alle due classi sopra definite
+freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
+
+pos =as.integer(freq_rel_y*length(prev_pass))
+tmp=sort(prev_pass, decreasing = TRUE)
+soglia =tmp[pos]
+#0.16649
+
+prev_pass_2=matrix(-1,nrow=nrow(prev_pass),ncol=ncol(prev_pass))
+
+for(i in 1:ncol(prev_pass_2))
+{
+  if (prev_pass[,i]>=soglia)
+    prev_pass_2[,i]==1
+}
+
 
 #################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
