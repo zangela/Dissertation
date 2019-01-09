@@ -17,7 +17,6 @@ library(SnowballC)
 library(kernlab) #svm online
 library(pROC) #!!!!!!!caricarla!!!!!
 source("lift-roc-tab.R")
-
 ##################################################################
 #
 #
@@ -113,8 +112,13 @@ rn = rep(0,nrow(datidef))
 for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 {
   rn[i]=i
-  if ( (as.character(datidef[i,8])=="steelco-usa.com")|(as.character(datidef[i,8])=="steelco.veniceplaza.net")|(as.character(datidef[i,8])=="steelcogroup.com")|(as.character(datidef[i,8])=="steelcoservice.com")|(as.character(datidef[i,8])=="steelcospa.com"))
-    datidef[i,11] = 1
+  if (is.na(as.character(datidef[i,8])) == FALSE)
+  {
+    if ( (as.character(datidef[i,8])=="steelco-usa.com")|(as.character(datidef[i,8])=="steelco.veniceplaza.net")|(as.character(datidef[i,8])=="steelcogroup.com")|(as.character(datidef[i,8])=="steelcoservice.com")|(as.character(datidef[i,8])=="steelcospa.com"))
+    {
+      datidef[i,11] = 1
+    }
+  }
 }
 rownames(datidef)=rn
 
@@ -502,6 +506,14 @@ print(grep("EMOTE",datidef[,12]) )
 #problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
 #capire quanto è grave la cosa. Se produce risultati poco affidabili
 
+
+## Gestione emoticons  
+datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
+length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
+print(grep("EMOTE",datidef[,12]) )
+#problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
+#capire quanto è grave la cosa. Se produce risultati poco affidabili
+
 # Normalizzazione del testo
 datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
@@ -590,10 +602,11 @@ for (i in 1:(n_part+1))
     if (part*(i-1) < nrow(datidef))
     {
       corpus = Corpus(VectorSource(datidef[(part*(i-1)+1):nrow(datidef),12]))
-      dic = make_dictionary(corpus,tmp)
+      tmp = make_dictionary(corpus,tmp)
     }
   }
 }
+dic = tmp
 dic= wordStem(dic, language = "english")
 dic= wordStem(dic, language = "italian")
 dic= wordStem(dic, language = "spanish")
@@ -621,7 +634,6 @@ for (i in 1:len)
 {
   dictionary[i]= colnfin[i]
 }
-
 ##################################################################
 #
 #
@@ -731,6 +743,35 @@ for (i in 1:len)
 #
 ##################################################################
 
+
+
+# ##################################################################
+# #                     ANALISI DELLE FREQUENZE
+# #                     non le posso lanciare xk troppo pesanti!!!!!!!!!
+# ##################################################################
+# 
+# 
+# #Avremo una matrice molto sparsa
+# 
+# #per avere la frequenza di ogni singola parola univoca:
+# freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
+# 
+# #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
+# ord_obj = sort(freq_obj,decreasing=T)
+# top_six=(head(ord_obj)/sum(ord_obj))
+# 
+# 
+# barplot(ord_obj, ylab="Frequenze assolute", main="Parole più frequenti nell'oggetto",ylim=(0:1), col=2)
+# 
+# 
+# 
+# farms %>% 
+#   ggplot(aes(x = as.data.frame(ord_obj)) +
+#            geom_bar())
+# 
+# 
+# 
+
 ##################################################################
 #                     ASSEGNAZIONE SENTIMENT
 ##################################################################
@@ -806,15 +847,10 @@ barplot(table(datidef[,16]),col=2:4, main="Proprorzione dei sent", xlab="Sent", 
 ##################################################################  
 
 
-#                         CREAZIONE FUNZIONI 
+#FUNZIONE CREA LE MATRICI DA DARE IN PASTO A SVM
 
 
 ##################################################################  
-
-
-################################################################## 
-#FUNZIONE CREA MATRICE DA DARE IN PASTO A SVM
-################################################################## 
 
 svm_data <- function(type, vector, min, max)
 {
@@ -828,13 +864,12 @@ svm_data <- function(type, vector, min, max)
   if (type == 0) # calcolo di objdef
   {
     
-    
+    print("objdef creazione inizio")
     mat = matrix(0, nrow=(max-min + 1), ncol=length(dictionary))
-    
     index = 0
     for (i in 1:(max-min+1))
     {
-      
+      #print(i)
       obj = strsplit(toString(ins.stima[min +index, 12]), " ") #datidef
       
       for (j in 1:length(obj[[1]]))
@@ -870,11 +905,12 @@ svm_data <- function(type, vector, min, max)
   else if (type == 1) # calcolo di domdef
   {
     
-    
+    print("domdef creazione")
     mat = matrix(0, nrow=(max-min +1), ncol=length(domain))
     index = 0
     for (i in 1:(max-min+1))
     {
+      #print(i)
       obj = as.matrix(as.character(ins.stima[min +index,8]))#datidef
       for (k in 1:nrow(obj))
       {
@@ -895,11 +931,12 @@ svm_data <- function(type, vector, min, max)
   }
   else if (type == 2) # calcolo motivation
   {
-    
+    print("motivation creazione")
     mat = matrix(0, nrow=(max-min +1), ncol=length(motivation))
     index = 0
     for (i in 1:(max-min+1))
     {
+      #print(i)
       obj = as.matrix(as.character(ins.stima[min +index,14]))#datidef
       for (k in 1:nrow(obj))
       {
@@ -924,15 +961,14 @@ svm_data <- function(type, vector, min, max)
 ################################################################## 
 #FUNZIONE CALCOLA FREQUENZA PAROLE IN OBJ
 ################################################################## 
-
-order_freq<-function(dictionary, freq_obj_tot) 
+order_freq<-function(dictionary, freq_obj_tot)
 {
   index = as.integer(1:length(dictionary))
   # ordino le frequenze in ordine decrescente
   for (i in 1:length(freq_obj_tot))
   {
     idxmax = which.max(freq_obj_tot[i:ncol(freq_obj_tot)])
-    idxmax = idxmax+i-1 #aggiustamento per considerare il max secondo i valori complessivi 
+    idxmax = idxmax+i-1
     freq = freq_obj_tot[i]
     freqid = index[i]
     freq_obj_tot[i]= freq_obj_tot[idxmax]
@@ -949,11 +985,12 @@ order_freq<-function(dictionary, freq_obj_tot)
   return(freq_obj_tot)
 }
 
+
 ################################################################## 
 #FUNZIONE CALCOLA PREVISIONI
-################################################################## 
+##################################################################
 
-prediction<-function(max_part, ins.ver, div, model) #funzione calcola previsioni nell'ins.verifica
+prediction<-function(max_part, ins.ver, div, model)
 {
   if (max_part > 1)
   {
@@ -979,16 +1016,18 @@ prediction<-function(max_part, ins.ver, div, model) #funzione calcola previsioni
         if(max > nrow(ins.ver))
           max = nrow(ins.ver)
       }
+      print(min)
+      print(max)
       matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
                         svm_data(1,domain, min,max),     #domain
                         svm_data(2,motivation,min,max),   #motivation
                         as.numeric(ins.ver[min:max,4]), #fascia
                         as.numeric(ins.ver[min:max,11]),#internal
-                        as.numeric(ins.ver[min:max,11]),#sbloccata
-                        as.numeric(ins.ver[min:max,15]),#sent
-                        as.numeric(ins.ver[min:max,16]) #nchar
+                        as.numeric(ins.ver[min:max,15]),#sbloccata
+                        as.numeric(ins.ver[min:max,16]),#sent
+                        as.numeric(ins.ver[min:max,17]) #nchar
       )
-      tmp=sign(predict(model,matrice_svm))
+      tmp=predict(model,matrice_svm)
       prev[1,min:max]=tmp
     }
     return(prev)
@@ -997,9 +1036,9 @@ prediction<-function(max_part, ins.ver, div, model) #funzione calcola previsioni
 
 ################################################################## 
 #FUNZIONE ALLENA IL MODELLO
-################################################################## 
+##################################################################
 
-train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model) #funzione per allenare il modello
+train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
 {
   for (i in 1:max_part)
   {
@@ -1020,15 +1059,18 @@ train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
       if(max > nrow(ins.stima))
         max = nrow(ins.stima)
     }
+    print(min)
+    print(max)
     matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
                       svm_data(1,domain, min,max),     #domain
                       svm_data(2,motivation,min,max),   #motivation
                       as.numeric(ins.stima[min:max,4]), #fascia
                       as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,14]),#sbloccata
-                      as.numeric(ins.stima[min:max,15]),#sent
-                      as.numeric(ins.stima[min:max,16]) #nchar
+                      as.numeric(ins.stima[min:max,15]),#sbloccata
+                      as.numeric(ins.stima[min:max,16]),#sent
+                      as.numeric(ins.stima[min:max,17]) #nchar
     )
+    print("allenamento modello")
     model <- onlearn(model_pass,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
   }
   return(model)
@@ -1076,20 +1118,27 @@ for (k in 1: nrow(ins.stima))       # classificazione ONE vs ONE
     y_binary[k,1]=1
   }
 }
-model_pass <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-div = 10 #la dim del campione per ogni ciclo
+model_pass <- inlearn(col,kernel="vanilladot",kpar=list(),type="classification")
+div = 1000 #la dim del campione per ogni ciclo
 last = FALSE
 max_part = as.integer(nrow(ins.stima)/div) #numero massimo di cicli che dovrà fare
 if (nrow(ins.stima)!=div*max_part) 
 {
   max_part = max_part+1             #aggiusto e porto da 72.72 a 73 per rendere intero il numero
 }
-if (max_part > 1)
+time_pass=system.time(if (max_part > 1)
 {
-   model_pass= train(max_part, div, ins.stima, dictionary, domain, motivation, model_pass)
-}
+  model_pass= train(max_part, div, ins.stima, dictionary, domain, motivation, model_pass)
+})
 
 prev_pass = prediction(max_part, ins.ver, div, model_pass)
+max = which.max(prev_pass)
+prev_pass=prev_pass/prev_pass[max]
+x = which.max(prev_pass)
+print(prev_pass[x])
+x = which.min(prev_pass)
+print(prev_pass[x])
+
 
 #################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
@@ -1101,8 +1150,8 @@ for (i in 1: nrow(ins.stima))
   }
   
 }
-model_qua <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-div = 10 #la dim del campione per ogni ciclo
+model_qua <- inlearn(col,kernel="vanilladot",kpar=list(),type="classification")
+div = 1000 #la dim del campione per ogni ciclo
 last = FALSE
 max_part = as.integer(nrow(ins.stima)/div) #numero massimo di cicli che dovrà fare
 if (nrow(ins.stima)!=div*max_part) 
@@ -1111,9 +1160,10 @@ if (nrow(ins.stima)!=div*max_part)
 }
 if (max_part > 1)
 {
-  model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua) #chiamo funzione creata prima
+  model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua)
 }
 prev_qua = prediction(max_part, ins.ver, div, model_qua)
+
 
 
 #################################################################
@@ -1127,10 +1177,10 @@ for (i in 1: nrow(ins.stima))
   
 }
 freq_obj=matrix(0,1,ncol=length(dictionary))
-freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salver� tutti i conteggi dei vari cicli. utilizzer� per grafico frequenze
+freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salver? tutti i conteggi dei vari cicli
 
-model_rig <- inlearn(col,kernel="rbfdot",kpar=list(sigma=0.2),type="classification")
-div = 10 #la dim del campione per ogni ciclo
+model_rig <- inlearn(col,kernel="vanilladot",kpar=list(),type="classification")
+div = 1000 #la dim del campione per ogni ciclo
 last = FALSE
 max_part = as.integer(nrow(ins.stima)/div) #numero massimo di cicli che dovrà fare
 if (nrow(ins.stima)!=div*max_part) 
@@ -1157,40 +1207,48 @@ if (max_part > 1)
       if(max > nrow(ins.stima))
         max = nrow(ins.stima)
     }
-    matrice_svm=cbind(svm_data(0, dictionary, min,max), #object
+    print(min)
+    print(max)
+    objmat = svm_data(0, dictionary, min,max)
+    matrice_svm=cbind(objmat, #object
                       svm_data(1,domain, min,max),      #domain
                       svm_data(2,motivation,min,max),   #motivation
                       as.numeric(ins.stima[min:max,4]), #fascia
                       as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,14]),#sbloccata
-                      as.numeric(ins.stima[min:max,15]),#sent
-                      as.numeric(ins.stima[min:max,16])) #nchar
+                      as.numeric(ins.stima[min:max,15]),#sbloccata
+                      as.numeric(ins.stima[min:max,16]),#sent
+                      as.numeric(ins.stima[min:max,17])) #nchar
     #aggiungo il contatore
     if (nrow(matrice_svm)>1)
     {
-      freq_obj=colSums((matrice_svm[,1:length(dictionary)]))
+      
+      freq_obj=colSums(objmat)
       freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
-    }
-    else
+    } else
     {
-      freq_obj=matrice_svm[,1:length(dictionary)]
+      freq_obj=objmat
       freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
     }
+    #freq_send = colSums(matrice_svm[,length(dictionary):(ncol(matrice_svm)-11)]) #sarebbe da lanciare su dtm
     
+    #ord_send = sort(freq_send,decreasing=T)
+    #top_six_s=(head(ord_send)/sum(ord_send))
+    #D2 <- D[c(as.numeric(order(D[1, ], decreasing = TRUE)))]
     model_rig <- onlearn(model_rig,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
   } 
 }
 
 freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
 #uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
+colnames(freq_obj_tot)=order_freq(dictionary, freq_obj_tot)
 
-
-prev_rig = prediction(max_part, ins.ver, div, model_rig) #previsioni nell'ins.verifica
+prev_rig = prediction(max_part, ins.ver, div, model_rig)
 
 
 ####################
 # fino a qua 
 ####################
+
 
 
 #######################################################################
