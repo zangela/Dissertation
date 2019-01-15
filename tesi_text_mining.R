@@ -15,7 +15,7 @@ library(e1071) #svm tradizionale
 library(ggplot2) 
 library(SnowballC)
 library(kernlab) #svm online
-library(pROC) #!!!!!!!caricarla!!!!!
+library(pROC) 
 source("lift-roc-tab.R")
 ##################################################################
 #
@@ -122,354 +122,7 @@ for (i in 1:nrow(datidef)) #codifica mittenti in base al dominio
 }
 rownames(datidef)=rn
 
-
-
-##################################################################
-#
-#
-#
-#
-#                           ANALISI DESCRITTIVE
-#
-#
-#
-#
-##################################################################
-
-
-##################################################################
-#1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
-##################################################################
-
-freqass_y=table(datidef[,6])                               #calcolo freq assolute
-freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
-
-barplot(freqass_y/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
-        ylim=(0:1), col=2:4, xlab="Codifica email")
-
-##################################################################
-#2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) 
-##################################################################
-
-freqass_in=table(datidef[,11]) #calcolo freq assolute
-barplot(freqass_in/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione per tipologia di mittente",
-        ylim=(0:1), col=3:5)
-
-#0->esterni
-#1->interni
-
-stee_p=0
-stee_r=0
-stee_q=0
-
-no_stee_p=0
-no_stee_r=0
-no_stee_q=0
-
-for (i in 1:nrow(datidef))
-{
-  if (as.numeric(datidef[i,11])==1)  #Domini interni:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      stee_p=stee_p+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      stee_r=stee_r+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      stee_q=stee_q+1
-  }
-  else #Domini esterni:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      no_stee_p=no_stee_p+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      no_stee_r=no_stee_r+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      no_stee_q=no_stee_q+1
-  }
-}
-
-
-#Interni:
-tot_int=(stee_p+stee_r+stee_q)
-stee_p_rel=stee_p/tot_int
-stee_q_rel=stee_q/tot_int
-stee_r_rel=stee_r/tot_int
-
-interni=cbind(stee_p_rel,stee_r_rel,stee_q_rel)
-colnames(interni)=c('pass','rige','quar')
-
-
-#Esterni:
-tot_est=(no_stee_p+no_stee_r+no_stee_q)
-no_stee_p_rel=no_stee_p/tot_est
-no_stee_q_rel=no_stee_q/tot_est
-no_stee_r_rel=no_stee_r/tot_est
-
-esterne=cbind(no_stee_p_rel,no_stee_r_rel,no_stee_q_rel)
-colnames(esterne)=c('pass','rige','quar')
-
-par(mfrow=c(1,2))
-barplot(interni, ylab="Frequenze relative", main="Distr per mittenti interni",ylim=(0:1), col=2:4)
-#correttamente tutte le email mandate dal dominio interno passano per il Firewall senza essere bloccate->risultato scontao
-barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",ylim=(0:1), col=2:4)
-
-
-##################################################################
-#3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
-##################################################################
-
-#devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
-#calcoliamo quanto email in quarantena ci sono e lo salviamo in num_quarantene 
-conteggio=table(datidef[,5])
-num_quarantene=conteggio[[2]]
-freqass_sb=0
-for (i in 1:nrow(datidef))
-{
-  if ((as.numeric(datidef[i,6])==2) & (as.numeric(datidef[i,16])==1))
-  {
-    freqass_sb = freqass_sb+1
-  }
-}
-freqass_sb=(freqass_sb/num_quarantene)
-freqass_sb      #->sarebbe l'errore commesso da parte del Firewall
-par(mfrow=c(1,1))
-
-##################################################################
-#4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
-##################################################################
-
-#capire quante email vengono mandate nelle diverse fasce orarie; 
-freqass_fascia=table(datidef[,4]) #calcolo freq assolute
-freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
-
-barplot(freqass_fascia/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
-        ylim=(0:1), col=2:3)
-
-#=0 fascia notturna
-#=1 fascia lavorativa
-
-#capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono-> capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
-#in "conteggio" abbiamo gi? il tot di email dei tre tipi: ci prendiamo quello che ci interessa
-
-num_passed=conteggio[[1]]
-num_rejected=conteggio[[3]]
-
-ps0=0
-rj0=0
-qr0=0
-
-ps1=0
-rj1=0
-qr1=0
-
-for (i in 1:nrow(datidef))
-{
-  if (as.numeric(datidef[i,4])==0)  #Fascia notturna:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      ps0=ps0+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rj0=rj0+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qr0=qr0+1
-  }
-  else #Fascia lavorativa:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      ps1=ps1+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rj1=rj1+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qr1=qr1+1
-  }
-}
-
-#Fascia notturna:
-tot_not=(ps0+rj0+qr0)
-ps0_rel=ps0/tot_not
-qr0_rel=qr0/tot_not
-rj0_rel=rj0/tot_not
-
-fascia_not=cbind(ps0_rel,rj0_rel,qr0_rel)
-colnames(fascia_not)=c('pass','rige','quar')
-
-#Fascia lavorativa:
-tot_lav=(ps1+rj1+qr1)
-ps1_rel=ps1/tot_lav
-qr1_rel=qr1/tot_lav
-rj1_rel=rj1/tot_lav
-
-fascia_lav=cbind(ps1_rel,rj1_rel,qr1_rel)
-colnames(fascia_lav)=c('pass','rige','quar')
-
-par(mfrow=c(1,2))
-barplot(fascia_not, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
-barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
-par(mfrow=c(1,1))
-
-##################################################################
-#5)ANALISI SULLA DISTRIBUZIONE PER MESE
-##################################################################
-
-#capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
-freq_mese=table(datidef[,1])
-
-k = sort(as.numeric(names(freq_mese)))
-f = matrix(0, nrow=1, ncol=length(freq_mese))
-names =as.numeric(names(freq_mese))
-idx =1
-for (idx in 1:ncol(f))
-  
-{
-  for (i in 1:length(freq_mese))
-  {
-    if (k[idx]==names[i])
-    {
-      
-      f[1,idx]= as.numeric(freq_mese[i])
-      i = length(freq_mese)+1
-    }
-  }
-}
-colnames(f)=k
-
-barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5, ylim=c(0:1))
-
-
-#capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi pi? intensi di altri)
-
-num_ago=f[[1]]
-num_sett=f[[2]]
-num_ott=f[[3]]
-num_nov=f[[4]]
-
-psa=0
-rja=0
-qra=0
-
-pss=0
-rjs=0
-qrs=0
-
-pso=0
-rjo=0
-qro=0
-
-psn=0
-rjn=0
-qrn=0
-
-
-for (i in 1:nrow(datidef))
-{
-  if (as.numeric(datidef[i,1])==8)  #Agosto:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      psa=psa+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rja=rja+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qra=qra+1
-  }
-  else if (as.numeric(datidef[i,1])==9)  #Settembre:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      pss=pss+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rjs=rjs+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qrs=qrs+1
-  }
-  else if (as.numeric(datidef[i,1])==10)  #Ottobre:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      pso=pso+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rjo=rjo+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qro=qro+1
-  }
-  else #Novembre:
-  {
-    if(as.numeric(datidef[i,6])==0) #passate 
-      psn=psn+1
-    if(as.numeric(datidef[i,6])==1) #rigettate
-      rjn=rjn+1
-    if (as.numeric(datidef[i,6])==2) #quarantene
-      qrn=qrn+1
-  }
-  
-}
-
-
-#Agosto:
-psa_rel=psa/num_ago
-qra_rel=qra/num_ago
-rja_rel=rja/num_ago
-
-agosto=cbind(psa_rel,rja_rel,qra_rel)
-colnames(agosto)=c('pass','rige','quar')
-
-#Settembre:
-pss_rel=pss/num_sett
-qrs_rel=qrs/num_sett
-rjs_rel=rjs/num_sett
-
-settembre=cbind(pss_rel,rjs_rel,qrs_rel)
-colnames(settembre)=c('pass','rige','quar')
-
-#Ottobre:
-pso_rel=pso/num_ott
-qro_rel=qro/num_ott
-rjo_rel=rjo/num_ott
-
-ottobre=cbind(pso_rel,rjo_rel,qro_rel)
-colnames(ottobre)=c('pass','rige','quar')
-
-
-#Novembre:
-psn_rel=psn/num_nov
-qrn_rel=qrn/num_nov
-rjn_rel=rjn/num_nov
-
-novembre=cbind(psn_rel,rjn_rel,qrn_rel)
-colnames(novembre)=c('pass','rige','quar')
-
-par(mfrow=c(2,2))
-
-barplot(agosto, ylab="Frequenze relative", main="Distr Agosto",ylim=(0:1), col=2:4)
-barplot(settembre, ylab="Frequenze relative", main="Distr Settembre",ylim=(0:1), col=2:4)
-barplot(ottobre, ylab="Frequenze relative", main="Distr Ottobre",ylim=(0:1), col=2:4)
-barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), col=2:4)
-
-par(mfrow=c(1,1))
-
-
-##################################################################
-#6)ANALISI SULLA DISTRIBUZIONE DELLE PASSATE
-##################################################################
-
-#vedere la distribuzione delle email passate rispetto ad internal/esternal
-
-int=0
-ext=0
-for (i in 1:nrow(datidef))
-{
-  if (as.numeric(datidef[i,6])==0) #se email passata (tot ne ho 813->corretto)
-  {
-    if(as.numeric(datidef[i,11])==1)  #interne 
-      int=int+1
-    else 
-      ext=ext+1 #esterne 
-  }
-}
-
-int_rel=int/sum(datidef[,6]==0)
-ext_rel=ext/sum(datidef[,6]==0)
-
-barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle email passate",ylim=(0:1), col=2:3)
-
-##################################################################
+#################################################################
 #
 #
 #                           TEXT MINING
@@ -511,22 +164,15 @@ print(grep("EMOTE",datidef[,12]) )
 datidef[,12]=normalizzaemote(datidef[,12])  #trasforma le emoticon in parole EMOTEGOOD EMOTECRY
 length(grep("EMOTE",datidef[,12])) #il numero di emoticons trovate in tot
 print(grep("EMOTE",datidef[,12]) )
-#problema: se trova una parola che termina per(remin)D: la segnala come emoticons!
-#capire quanto è grave la cosa. Se produce risultati poco affidabili
 
 # Normalizzazione del testo
 datidef[,12]=normalizzaTesti(datidef[,12],contaStringhe = c("\\?","!","@","#","(\u20AC|euro)","(\\$|dollar)")) 
 #Salvo i conteggi delle parole specificate come matrice a parte
 
-conteggi_caratteri=as.data.frame(attributes(datidef[,12])$counts)
-#problema: NON FUNZIONA!
-
 #Eliminare le stopwords
 #nota: molte parole std sono state eliminate da nomalizzaTesti (non trovo, a, il, lo,...)
 datidef[,12]=removeStopwords(datidef[,12], stopwords = c(itastopwords,"re", "rif", stopwords_nl, stopwords_de, stopwords_fr, stopwords_en)) 
-#stopwords ->Stopwordlists in German, English, Dutch, French, Polish, and Arab
 
-#ritengo che re,rif siano poco utili ai fini dello studio. Inoltre sono due delle parole più frequenti. Per non sballare le statistiche credo sia opportuno toglierle
 datidef[,12]=removeNumbers(datidef[,12]) #vale quanto detto per re e rif sopra
 
 #Analisi degli n-grammi 
@@ -744,34 +390,6 @@ for (i in 1:len)
 ##################################################################
 
 
-
-# ##################################################################
-# #                     ANALISI DELLE FREQUENZE
-# #                     non le posso lanciare xk troppo pesanti!!!!!!!!!
-# ##################################################################
-# 
-# 
-# #Avremo una matrice molto sparsa
-# 
-# #per avere la frequenza di ogni singola parola univoca:
-# freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
-# 
-# #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
-# ord_obj = sort(freq_obj,decreasing=T)
-# top_six=(head(ord_obj)/sum(ord_obj))
-# 
-# 
-# barplot(ord_obj, ylab="Frequenze assolute", main="Parole più frequenti nell'oggetto",ylim=(0:1), col=2)
-# 
-# 
-# 
-# farms %>% 
-#   ggplot(aes(x = as.data.frame(ord_obj)) +
-#            geom_bar())
-# 
-# 
-# 
-
 ##################################################################
 #                     ASSEGNAZIONE SENTIMENT
 ##################################################################
@@ -780,59 +398,11 @@ for (i in 1:len)
 #lo useremo come possibile predittore  futuro
 sent=sentiment(datidef[,12]) #"positivo" (+1), "negativo" (-1),  "neutro" (0)
 
-#unisco già in datidef due dei predittori che mi serviranno poi per svm->manca però conteggio_caratteri che non funziona
+#unisco già in datidef due dei predittori che mi serviranno poi per svm
 datidef=cbind(datidef,sent,nchars)
-
-#il problema delle emoticons qui fa sbagliare qualche sent a mio avviso
 
 prop.table(table(datidef[,16],exclude = NULL)) #ci da la proporzione di sent
 barplot(table(datidef[,16]),col=2:4, main="Proprorzione dei sent", xlab="Sent", ylab="Freq")
-
-##################################################################
-#
-#
-#
-#
-#                       ANALISI GRAFICA
-#
-#
-#
-#
-# ##################################################################
-# 
-# ##################################################################
-# #                     FREQUENZA PAROLE NELL'OGGETTO
-# ##################################################################
-# 
-# 
-# wf = data.frame(word=names(ord_obj), freq=ord_obj)
-# p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
-# p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-# p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-# 
-# 
-# #Word Cloud
-# set.seed(123)
-# 
-# wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-# #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
-# 
-# ##################################################################
-# #                     FREQUENZA SENDER
-# ##################################################################
-# 
-# freq_send = colSums(sendomdef)
-# 
-# wf1 = data.frame(word=names(freq_send), freq=freq_send)
-# p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
-# p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-# p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-# p1
-# 
-# #Word Cloud
-# set.seed(123)
-# wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-
 
 
 ##################################################################
@@ -1079,10 +649,6 @@ train<-function(max_part, div, ins.stima, dictionary, domain, motivation, model)
   return(model)
 }
 
-
-
-
-
 ##################################################################
 #
 #                 SUDDIVISIONE IN STIMA E VERIFICA
@@ -1094,22 +660,17 @@ campione= sample(1:nrow(datidef),as.integer(nrow(datidef)*0.7))# regola del 70-3
 ins.stima= datidef[campione,]			
 ins.ver = datidef[-campione,]
 
+###########################################################
 
+#                           SVM ONLINE
 
 ###########################################################
 
-#SVM ONLINE
+###############################################################################################################
 
-#LINK UTILE:
-#https://cran.r-project.org/web/packages/kernlab/vignettes/kernlab.pdf    ->LINK PAPAER
+#                                           MODELLO 1 -> PASSATE VS ALL
 
-#https://www.rdocumentation.org/packages/kernlab/versions/0.9-27/topics/onlearn     ->SPIEGAZIONE COMANDO ONLEARN
-
-#https://www.rdocumentation.org/packages/kernlab/versions/0.9-27/topics/inlearn     ->SPIEGAZIONE COMANDO INLEARN
-
-
-################################################################
-
+###############################################################################################################
 
 col = length(dictionary)+length(domain)+length(motivation)+5 #+5=fascia+internal+sbloccata+sent+nchars
 
@@ -1143,9 +704,7 @@ x = which.min(prev_pass)
 print(prev_pass[x])
 
 ##############################################
-
-#CALCOLO SOGLIA p*
-
+#CALCOLO SOGLIA p* 
 ##############################################
 
 y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
@@ -1162,9 +721,11 @@ freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
 pos =as.integer(freq_rel_y*length(prev_pass))
 tmp=sort(prev_pass, decreasing = FALSE)
 soglia_pass =tmp[pos]
-#0.16649
+#0.06696015
 
-
+##############################################
+#CALCOLO PREVISIONI 
+##############################################
 
 prev_pass_2=matrix(-1,nrow=1,ncol=length(prev_pass))
 
@@ -1177,18 +738,24 @@ for(i in 1:ncol(prev_pass))
   }
 }
 
+##############################################
+#VALUTAZIONE PERFORMANCE
+##############################################
 
 tab_pass = tabella.sommario(prev_pass_2, y_ver)
 plot.roc(as.numeric(y_ver), as.numeric(prev_pass_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,0))
-#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
 auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_pass_2))[1]
 auc.lineare
 
-#################################################################
+###############################################################################################################
+
+#                                           MODELLO 2 -> QUARANTENA VS ALL
+
+###############################################################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
 for (i in 1: nrow(ins.stima))
 {
-  if (as.numeric(ins.stima[i,6])==2) #quarantena contro all
+  if (as.numeric(ins.stima[i,6])==2) 
   {
     y_binary[i,1]=1
   }
@@ -1206,6 +773,7 @@ time_qua = system.time(if (max_part > 1)
 {
   model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua)
 })
+
 prev_qua = prediction(max_part, ins.ver, div, model_qua)
 min = which.min(prev_qua)
 prev_qua=prev_qua/prev_qua[min]
@@ -1215,28 +783,27 @@ x = which.min(prev_qua)
 print(prev_qua[x])
 
 ##############################################
-
 #CALCOLO SOGLIA p*
-
 ##############################################
 
 y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
 for (i in 1: nrow(ins.ver))
 {
-  if (as.numeric(ins.ver[i,6])==2) #rigettate contro all
+  if (as.numeric(ins.ver[i,6])==2) 
   {
     y_ver[i,1]=1
   }
 }
-#calcolo le frequenze in base alle due classi sopra definite
 freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
 
 pos =as.integer(freq_rel_y*length(prev_qua))
 tmp=sort(prev_qua, decreasing = TRUE)
 soglia_qua =tmp[pos]
-#0.16649
+#0.0720892
 
-
+##############################################
+#CALCOLO PREVISIONI 
+##############################################
 
 prev_qua_2=matrix(-1,nrow=1,ncol=length(prev_qua))
 
@@ -1249,16 +816,20 @@ for(i in 1:ncol(prev_qua))
   }
 }
 
+##############################################
+#VALUTAZIONE PERFORMANCE
+##############################################
 
 tab_qua = tabella.sommario(prev_qua_2, y_ver)
-plot.roc(as.numeric(y_ver), as.numeric(prev_qua_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
-#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
+plot.roc(as.numeric(y_ver), as.numeric(prev_qua_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,0))
 auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_qua_2))[1]
 auc.lineare
 
+###############################################################################################################
 
+#                                           MODELLO 3 -> RIGETTATE VS ALL
 
-#################################################################
+###############################################################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
 for (i in 1: nrow(ins.stima))
 {
@@ -1291,9 +862,7 @@ x = which.min(prev_rig)
 print(prev_rig[x])
 
 ##############################################
-
 #CALCOLO SOGLIA p*
-
 ##############################################
 
 y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
@@ -1310,10 +879,11 @@ freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
 pos =as.integer(freq_rel_y*length(prev_rig))
 tmp=sort(prev_rig, decreasing = TRUE)
 soglia_rig =tmp[pos]
-#0.16649
+#0.07279545
 
-
-
+##############################################
+#CALCOLO PREVISIONI 
+##############################################
 prev_rig_2=matrix(-1,nrow=1,ncol=length(prev_rig))
 
 for(i in 1:ncol(prev_rig))
@@ -1325,23 +895,18 @@ for(i in 1:ncol(prev_rig))
   }
 }
 
+##############################################
+#VALUTAZIONE PERFORMANCE
+##############################################
 
 tab_rig = tabella.sommario(prev_rig_2, y_ver)
-
 plot.roc(as.numeric(y_ver), as.numeric(prev_rig_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
-#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
 auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_rig_2))[1]
 auc.lineare
 
-
-
 ##########################################################################
 #
-#
-#
 # CALCOLO FREQUENZE PAROLE IN OGGETTO
-#
-#
 #
 ##########################################################################
 
@@ -1371,7 +936,7 @@ for (i in 1:max_part)
   objmat = svm_data(0, dictionary, min,max) #object
                     
   #aggiungo il contatore
-  if (nrow(matrice_svm)>1)
+  if (nrow(objmat)>1)
   {
     
     freq_obj=colSums(objmat)
@@ -1387,14 +952,52 @@ freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
 f_obj_t=order_freq(dictionary, freq_obj_tot)
 
 
+##########################################################################
+#
+# CALCOLO FREQUENZE SENDER
+#
+##########################################################################
 
-
-
-
-####################
-# fino a qua 
-####################
-
+freq_send=matrix(0,1,ncol=length(domain))
+freq_send_tot=matrix(0,1,ncol=length(domain)) #matrice in cui salver? tutti i conteggi dei vari cicli
+for (i in 1:max_part)
+{
+  
+  if (i == 1)
+  {
+    min = 1
+    max = div
+  }
+  else
+  {
+    min = (i-1)*div+1
+    
+    if(min > nrow(ins.stima))
+      break
+    max = i*div
+    
+    if(max > nrow(ins.stima))
+      max = nrow(ins.stima)
+  }
+  print(min)
+  print(max)
+  dommat = svm_data(1, domain, min,max) #object
+  
+  #aggiungo il contatore
+  if (nrow(dommat)>1)
+  {
+    
+    freq_send=colSums(dommat)
+    freq_send_tot=freq_send_tot+freq_send #freq assolute
+  } else
+  {
+    freq_send=dommat
+    freq_send_tot=freq_send_tot+freq_send #freq assolute
+  }
+}
+freq_send_tot=freq_send_tot/nrow(ins.stima) #freq relative sul training
+#uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
+f_send_t=order_freq(domain, freq_send_tot)
 
 
 #######################################################################
@@ -1415,76 +1018,373 @@ p = p + theme(axis.text.x=element_text(angle=45, hjust=1))
 
 #Word Cloud
 set.seed(123)
-wordcloud(colnames(f_obj_t), f_obj_t, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-
-
+wordcloud(colnames(f_obj_t), f_obj_t, max.words=70,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 
 
 #######################################################################
 #                       DOMINI SENDER
 #######################################################################
 
+wf1 = data.frame(word=colnames(f_send_t), freq=f_send_t[1])
+p1 = ggplot(subset(wf1, freq>5), aes(word, freq))
+p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue")
+p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1))
+set.seed(123)
+wordcloud(colnames(f_send_t), f_send_t, max.words=50,colors=brewer.pal(6,"Paired"), random.order=TRUE)
 
-#######################################################################
+##DA RIVEDERE!!!
 
-#             VALUTAZIONE PERFORMANCE MODELLO
-
-#######################################################################
-
-
-#MODELLO RIGETTATE VS ALL
-
-
-#Devo rendere anche y in ins.ver binaria per i tre casi:
-
-
-
-
-#restituisce matrice di confusione
-#disegno la curva ROC
-
-
-
-
-
-
-
+##################################################################
+#
+#
+#
+#
+#                           ANALISI DESCRITTIVE
+#
+#
+#
+#
+##################################################################
 
 
 ##################################################################
-# #                     FREQUENZA PAROLE NELL'OGGETTO
-# ##################################################################
-# 
-#freq_obj = colSums(as.matrix(objdef)) #sarebbe da lanciare su dtm
-# 
-# #Next, we sort this in descending order to get to know the terms with the highest frequency, as follows:
-# ord_obj = sort(freq_obj,decreasing=T)
-# top_six=(head(ord_obj)/sum(ord_obj))
-# 
-# wf = data.frame(word=names(ord_obj), freq=ord_obj)
-# p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
-# p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-# p = p + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-# 
-# 
-# #Word Cloud
-# set.seed(123)
-# 
-# wordcloud(names(ord_obj), ord_obj, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
-# #piu' scenografico. Occhio al random order 8ogni volta cambia l'ordine
-# 
-# ##################################################################
-# #                     FREQUENZA SENDER
-# ##################################################################
-# 
-# freq_send = colSums(sendomdef)
-# 
-# wf1 = data.frame(word=names(freq_send), freq=freq_send)
-# p1 = ggplot(subset(wf1, freq>5), aes(word, freq)) 
-# p1 = p1 + geom_bar(stat="identity",color="darkblue", fill="lightblue") 
-# p1 = p1 + theme(axis.text.x=element_text(angle=45, hjust=1)) 
-# p1
-# 
-# #Word Cloud
-# set.seed(123)
-# wordcloud(names(freq_send), freq_send, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+#1) ANALISI SULLA DISTRIBUZIONE DI Y CODIFICATA COME NUMERICA
+##################################################################
+
+freqass_y=table(ins.stima[,6])                               #calcolo freq assolute
+freqrel=as.numeric(freqass_y/sum(freqass_y))               #calcolo freq relative
+
+barplot(freqass_y/sum(freqass_y), ylab="Frequenze relative", main="Distribuzione della tipologia di email",
+        ylim=(0:1), col=2:4, xlab="Codifica email")
+
+##################################################################
+#2)ANALISI SULLA DISTRIBUZIONE DEI MITTENTI (INTERNI O ESTERNI) 
+##################################################################
+
+freqass_in=table(ins.stima[,11]) #calcolo freq assolute
+barplot(freqass_in/sum(freqass_in), ylab="Frequenze relative", main="Distribuzione per tipologia di mittente",
+        ylim=(0:1), col=3:5)
+
+#0->esterni
+#1->interni
+
+stee_p=0
+stee_r=0
+stee_q=0
+
+no_stee_p=0
+no_stee_r=0
+no_stee_q=0
+
+for (i in 1:nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,11])==1)  #Domini interni:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      stee_p=stee_p+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      stee_r=stee_r+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      stee_q=stee_q+1
+  }
+  else #Domini esterni:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      no_stee_p=no_stee_p+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      no_stee_r=no_stee_r+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      no_stee_q=no_stee_q+1
+  }
+}
+
+
+#Interni:
+tot_int=(stee_p+stee_r+stee_q)
+stee_p_rel=stee_p/tot_int
+stee_q_rel=stee_q/tot_int
+stee_r_rel=stee_r/tot_int
+
+interni=cbind(stee_p_rel,stee_r_rel,stee_q_rel)
+colnames(interni)=c('pass','rige','quar')
+
+
+#Esterni:
+tot_est=(no_stee_p+no_stee_r+no_stee_q)
+no_stee_p_rel=no_stee_p/tot_est
+no_stee_q_rel=no_stee_q/tot_est
+no_stee_r_rel=no_stee_r/tot_est
+
+esterne=cbind(no_stee_p_rel,no_stee_r_rel,no_stee_q_rel)
+colnames(esterne)=c('pass','rige','quar')
+
+par(mfrow=c(1,2))
+barplot(interni, ylab="Frequenze relative", main="Distr per mittenti interni",ylim=(0:1), col=2:4)
+#correttamente tutte le email mandate dal dominio interno passano per il Firewall senza essere bloccate->risultato scontao
+barplot(esterne, ylab="Frequenze relative", main="Distr per mittenti esterni",ylim=(0:1), col=2:4)
+
+
+##################################################################
+#3)ANALISI SULLA DISTRIBUZIONE DELLE EMAIIL SBLOCCATE
+##################################################################
+
+#devo prendere solo le y_cod=2 e verificare la proporzione di email sbloccate
+#calcoliamo quanto email in quarantena ci sono e lo salviamo in num_quarantene 
+conteggio=table(ins.stima[,5])
+num_quarantene=conteggio[[2]]
+freqass_sb=0
+for (i in 1:nrow(ins.stima))
+{
+  if ((as.numeric(ins.stima[i,6])==2) & (as.numeric(ins.stima[i,16])==1))
+  {
+    freqass_sb = freqass_sb+1
+  }
+}
+freqass_sb=(freqass_sb/num_quarantene)
+freqass_sb      #->sarebbe l'errore commesso da parte del Firewall
+par(mfrow=c(1,1))
+
+##################################################################
+#4)ANALISI SULLA DISTRIBUZIONE PER FASCIA ORARIA
+##################################################################
+
+#capire quante email vengono mandate nelle diverse fasce orarie; 
+freqass_fascia=table(ins.stima[,4]) #calcolo freq assolute
+freqrel_fascia=as.numeric(freqass_fascia/sum(freqass_fascia)) #calcolo freq relative
+
+barplot(freqass_fascia/sum(freqass_fascia), ylab="Frequenze relative", main="Distribuzione delle email per fascia oraria",
+        ylim=(0:1), col=2:3)
+
+#=0 fascia notturna
+#=1 fascia lavorativa
+
+#capire nella fascia lavorativa (e non) quante email dei tre tipi ci sono-> capiamo la distribuzione delle email (delivedere, quarantened e rejected) nelle due fascie orarie
+#in "conteggio" abbiamo gi? il tot di email dei tre tipi: ci prendiamo quello che ci interessa
+
+num_passed=conteggio[[1]]
+num_rejected=conteggio[[3]]
+
+ps0=0
+rj0=0
+qr0=0
+
+ps1=0
+rj1=0
+qr1=0
+
+for (i in 1:nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,4])==0)  #Fascia notturna:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      ps0=ps0+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rj0=rj0+1
+    if (as.numeric(datidef[i,6])==2) #quarantene
+      qr0=qr0+1
+  }
+  else #Fascia lavorativa:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      ps1=ps1+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rj1=rj1+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      qr1=qr1+1
+  }
+}
+
+#Fascia notturna:
+tot_not=(ps0+rj0+qr0)
+ps0_rel=ps0/tot_not
+qr0_rel=qr0/tot_not
+rj0_rel=rj0/tot_not
+
+fascia_not=cbind(ps0_rel,rj0_rel,qr0_rel)
+colnames(fascia_not)=c('pass','rige','quar')
+
+#Fascia lavorativa:
+tot_lav=(ps1+rj1+qr1)
+ps1_rel=ps1/tot_lav
+qr1_rel=qr1/tot_lav
+rj1_rel=rj1/tot_lav
+
+fascia_lav=cbind(ps1_rel,rj1_rel,qr1_rel)
+colnames(fascia_lav)=c('pass','rige','quar')
+
+par(mfrow=c(1,2))
+barplot(fascia_not, ylab="Frequenze relative", main="Distr fascia notturna",ylim=(0:1), col=2:4)
+barplot(fascia_lav, ylab="Frequenze relative", main="Distr fascia lavorativa",ylim=(0:1), col=2:4)
+par(mfrow=c(1,1))
+
+##################################################################
+#5)ANALISI SULLA DISTRIBUZIONE PER MESE
+##################################################################
+
+#capire quante email vengono mandate nei diversi mesi ->mese dev'essere un fattore!
+freq_mese=table(ins.stima[,1])
+
+k = sort(as.numeric(names(freq_mese)))
+f = matrix(0, nrow=1, ncol=length(freq_mese))
+names =as.numeric(names(freq_mese))
+idx =1
+for (idx in 1:ncol(f))
+  
+{
+  for (i in 1:length(freq_mese))
+  {
+    if (k[idx]==names[i])
+    {
+      
+      f[1,idx]= as.numeric(freq_mese[i])
+      i = length(freq_mese)+1
+    }
+  }
+}
+colnames(f)=k
+
+barplot(f/sum(freq_mese), ylab="Frequenze relative", main="Distribuzione email per Mese", col=2:5, ylim=c(0:1))
+
+
+#capire nei vari mesi quante email dei tre tipi ci sono (capire se ci sono stati mesi pi? intensi di altri)
+
+num_ago=f[[1]]
+num_sett=f[[2]]
+num_ott=f[[3]]
+num_nov=f[[4]]
+
+psa=0
+rja=0
+qra=0
+
+pss=0
+rjs=0
+qrs=0
+
+pso=0
+rjo=0
+qro=0
+
+psn=0
+rjn=0
+qrn=0
+
+
+for (i in 1:nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,1])==8)  #Agosto:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      psa=psa+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rja=rja+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      qra=qra+1
+  }
+  else if (as.numeric(ins.stima[i,1])==9)  #Settembre:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      pss=pss+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rjs=rjs+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      qrs=qrs+1
+  }
+  else if (as.numeric(ins.stima[i,1])==10)  #Ottobre:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      pso=pso+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rjo=rjo+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      qro=qro+1
+  }
+  else #Novembre:
+  {
+    if(as.numeric(ins.stima[i,6])==0) #passate 
+      psn=psn+1
+    if(as.numeric(ins.stima[i,6])==1) #rigettate
+      rjn=rjn+1
+    if (as.numeric(ins.stima[i,6])==2) #quarantene
+      qrn=qrn+1
+  }
+  
+}
+
+
+#Agosto:
+psa_rel=psa/num_ago
+qra_rel=qra/num_ago
+rja_rel=rja/num_ago
+
+agosto=cbind(psa_rel,rja_rel,qra_rel)
+colnames(agosto)=c('pass','rige','quar')
+
+#Settembre:
+pss_rel=pss/num_sett
+qrs_rel=qrs/num_sett
+rjs_rel=rjs/num_sett
+
+settembre=cbind(pss_rel,rjs_rel,qrs_rel)
+colnames(settembre)=c('pass','rige','quar')
+
+#Ottobre:
+pso_rel=pso/num_ott
+qro_rel=qro/num_ott
+rjo_rel=rjo/num_ott
+
+ottobre=cbind(pso_rel,rjo_rel,qro_rel)
+colnames(ottobre)=c('pass','rige','quar')
+
+
+#Novembre:
+psn_rel=psn/num_nov
+qrn_rel=qrn/num_nov
+rjn_rel=rjn/num_nov
+
+novembre=cbind(psn_rel,rjn_rel,qrn_rel)
+colnames(novembre)=c('pass','rige','quar')
+
+par(mfrow=c(2,2))
+
+barplot(agosto, ylab="Frequenze relative", main="Distr Agosto",ylim=(0:1), col=2:4)
+barplot(settembre, ylab="Frequenze relative", main="Distr Settembre",ylim=(0:1), col=2:4)
+barplot(ottobre, ylab="Frequenze relative", main="Distr Ottobre",ylim=(0:1), col=2:4)
+barplot(novembre, ylab="Frequenze relative", main="Distr Novembre",ylim=(0:1), col=2:4)
+
+par(mfrow=c(1,1))
+
+
+##################################################################
+#6)ANALISI SULLA DISTRIBUZIONE DELLE PASSATE
+##################################################################
+
+#vedere la distribuzione delle email passate rispetto ad internal/esternal
+
+int=0
+ext=0
+for (i in 1:nrow(ins.stima))
+{
+  if (as.numeric(ins.stima[i,6])==0) #se email passata (tot ne ho 813->corretto)
+  {
+    if(as.numeric(ins.stima[i,11])==1)  #interne 
+      int=int+1
+    else 
+      ext=ext+1 #esterne 
+  }
+}
+
+int_rel=int/sum(ins.stima[,6]==0)
+ext_rel=ext/sum(ins.stima[,6]==0)
+
+barplot(cbind(int_rel,ext_rel), ylab="Frequenze relative", main="Distr nelle email passate",ylim=(0:1), col=2:3)
+
+####################################################################################
+
+#CALCOLO RETI NEURALI
+
+####################################################################################
+
+
+
+

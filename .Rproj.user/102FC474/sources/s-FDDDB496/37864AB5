@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1547581914833.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "244618629",
+    "id" : "37864AB5",
+    "lastKnownWriteTime" : 1547582531,
+    "last_content_update" : 1547582532774,
+    "path" : "C:/Users/Angela/Desktop/Dissertation/reti_neurali.R",
+    "project_path" : "reti_neurali.R",
+    "properties" : {
+        "cursorPosition" : "44,0",
+        "scrollLine" : "11",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
