@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1547570390044.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2604569675",
+    "id" : "7A39F61",
+    "lastKnownWriteTime" : 1547570426,
+    "last_content_update" : 1547570426659,
+    "path" : "C:/Users/martinidav/Desktop/maybe/lift-roc-tab.R",
+    "project_path" : "lift-roc-tab.R",
+    "properties" : {
+        "cursorPosition" : "2,3",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

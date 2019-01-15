@@ -62,6 +62,7 @@ lift.roc<- function(previsti, g, type="bin", plot.it=TRUE)
 #
 tabella.sommario <- function(previsti, osservati){
   n <-  table(previsti,osservati)
+  print(n)
   err.tot <- 1-sum(diag(n))/sum(n)
   fn <- n[1,2]/(n[1,2]+n[2,2])
   fp <- n[2,1]/(n[1,1]+n[2,1])

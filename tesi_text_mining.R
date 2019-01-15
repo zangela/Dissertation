@@ -963,6 +963,8 @@ svm_data <- function(type, vector, min, max)
 ################################################################## 
 order_freq<-function(dictionary, freq_obj_tot)
 {
+  
+  f = matrix(0, nrow=1, ncol=length(freq_obj_tot))
   index = as.integer(1:length(dictionary))
   # ordino le frequenze in ordine decrescente
   for (i in 1:length(freq_obj_tot))
@@ -975,14 +977,15 @@ order_freq<-function(dictionary, freq_obj_tot)
     index[i]= index[idxmax]
     freq_obj_tot[idxmax]=freq
     index[idxmax]=freqid
+    f[1,i]=freq_obj_tot[i]
   }
   colnames = character(length(freq_obj_tot))
   for (i in 1:length(dictionary))
   {
     colnames[i]=dictionary[index[i]]
   }
-  colnames(freq_obj_tot)=colnames
-  return(freq_obj_tot)
+  colnames(f)=colnames
+  return(f)
 }
 
 
@@ -1145,30 +1148,41 @@ print(prev_pass[x])
 
 ##############################################
 
-y_ver<-matrix(-1,nrow=nrow(datidef),1)
-for (k in 1: nrow(datidef))       # 
+y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
+for (i in 1: nrow(ins.ver))
 {
-  if (as.numeric(datidef[k,6])==0) #passate contro all
+  if (as.numeric(ins.ver[i,6])==0) #passate contro all
   {
-    y_ver[k,1]=1
+    y_ver[i,1]=1
   }
 }
 #calcolo le frequenze in base alle due classi sopra definite
 freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
 
 pos =as.integer(freq_rel_y*length(prev_pass))
-tmp=sort(prev_pass, decreasing = TRUE)
-soglia =tmp[pos]
+tmp=sort(prev_pass, decreasing = FALSE)
+soglia_pass =tmp[pos]
 #0.16649
 
-prev_pass_2=matrix(-1,nrow=nrow(prev_pass),ncol=ncol(prev_pass))
 
-for(i in 1:ncol(prev_pass_2))
+
+prev_pass_2=matrix(-1,nrow=1,ncol=length(prev_pass))
+
+for(i in 1:ncol(prev_pass))
 {
-  if (prev_pass[,i]>=soglia)
-    prev_pass_2[,i]==1
+  if (prev_pass[1,i]>=soglia_pass)
+  {
+    prev_pass_2[1,i]=1
+    
+  }
 }
 
+
+tab_pass = tabella.sommario(prev_pass_2, y_ver)
+plot.roc(as.numeric(y_ver), as.numeric(prev_pass_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,0))
+#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
+auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_pass_2))[1]
+auc.lineare
 
 #################################################################
 y_binary<-matrix(-1,nrow=nrow(ins.stima),1)
@@ -1188,11 +1202,59 @@ if (nrow(ins.stima)!=div*max_part)
 {
   max_part = max_part+1             #aggiusto e porto da 72.72 a 73 per rendere intero il numero
 }
-if (max_part > 1)
+time_qua = system.time(if (max_part > 1)
 {
   model_qua= train(max_part, div, ins.stima, dictionary, domain, motivation, model_qua)
-}
+})
 prev_qua = prediction(max_part, ins.ver, div, model_qua)
+min = which.min(prev_qua)
+prev_qua=prev_qua/prev_qua[min]
+x = which.max(prev_qua)
+print(prev_qua[x])
+x = which.min(prev_qua)
+print(prev_qua[x])
+
+##############################################
+
+#CALCOLO SOGLIA p*
+
+##############################################
+
+y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
+for (i in 1: nrow(ins.ver))
+{
+  if (as.numeric(ins.ver[i,6])==2) #rigettate contro all
+  {
+    y_ver[i,1]=1
+  }
+}
+#calcolo le frequenze in base alle due classi sopra definite
+freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
+
+pos =as.integer(freq_rel_y*length(prev_qua))
+tmp=sort(prev_qua, decreasing = TRUE)
+soglia_qua =tmp[pos]
+#0.16649
+
+
+
+prev_qua_2=matrix(-1,nrow=1,ncol=length(prev_qua))
+
+for(i in 1:ncol(prev_qua))
+{
+  if (prev_qua[1,i]>=soglia_qua)
+  {
+    prev_qua_2[1,i]=1
+    
+  }
+}
+
+
+tab_qua = tabella.sommario(prev_qua_2, y_ver)
+plot.roc(as.numeric(y_ver), as.numeric(prev_qua_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
+#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
+auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_qua_2))[1]
+auc.lineare
 
 
 
@@ -1206,8 +1268,6 @@ for (i in 1: nrow(ins.stima))
   }
   
 }
-freq_obj=matrix(0,1,ncol=length(dictionary))
-freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salver? tutti i conteggi dei vari cicli
 
 model_rig <- inlearn(col,kernel="vanilladot",kpar=list(),type="classification")
 div = 1000 #la dim del campione per ogni ciclo
@@ -1217,62 +1277,118 @@ if (nrow(ins.stima)!=div*max_part)
 {
   max_part = max_part+1             #aggiusto e porto da 72.72 a 73 per rendere intero il numero
 }
-if (max_part > 1)
+time_qua = system.time(if (max_part > 1)
 {
-  for (i in 1:max_part)
-  {
-    
-    if (i == 1)
-    {
-      min = 1
-      max = div
-    }
-    else
-    {
-      min = (i-1)*div+1
-      
-      if(min > nrow(ins.stima))
-        break
-      max = i*div
-      if(max > nrow(ins.stima))
-        max = nrow(ins.stima)
-    }
-    print(min)
-    print(max)
-    objmat = svm_data(0, dictionary, min,max)
-    matrice_svm=cbind(objmat, #object
-                      svm_data(1,domain, min,max),      #domain
-                      svm_data(2,motivation,min,max),   #motivation
-                      as.numeric(ins.stima[min:max,4]), #fascia
-                      as.numeric(ins.stima[min:max,11]),#internal
-                      as.numeric(ins.stima[min:max,15]),#sbloccata
-                      as.numeric(ins.stima[min:max,16]),#sent
-                      as.numeric(ins.stima[min:max,17])) #nchar
-    #aggiungo il contatore
-    if (nrow(matrice_svm)>1)
-    {
-      
-      freq_obj=colSums(objmat)
-      freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
-    } else
-    {
-      freq_obj=objmat
-      freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
-    }
-    #freq_send = colSums(matrice_svm[,length(dictionary):(ncol(matrice_svm)-11)]) #sarebbe da lanciare su dtm
-    
-    #ord_send = sort(freq_send,decreasing=T)
-    #top_six_s=(head(ord_send)/sum(ord_send))
-    #D2 <- D[c(as.numeric(order(D[1, ], decreasing = TRUE)))]
-    model_rig <- onlearn(model_rig,matrice_svm,y_binary[min:max,],nu=0.03,lambda=0.1) #da modificare nella verifica
-  } 
-}
-
-freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
-#uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
-colnames(freq_obj_tot)=order_freq(dictionary, freq_obj_tot)
+  model_rig= train(max_part, div, ins.stima, dictionary, domain, motivation, model_rig)
+})
 
 prev_rig = prediction(max_part, ins.ver, div, model_rig)
+min = which.min(prev_rig)
+prev_rig=prev_rig/prev_rig[min]
+x = which.max(prev_rig)
+print(prev_rig[x])
+x = which.min(prev_rig)
+print(prev_rig[x])
+
+##############################################
+
+#CALCOLO SOGLIA p*
+
+##############################################
+
+y_ver<-matrix(-1,nrow=nrow(ins.ver),ncol=1)
+for (i in 1: nrow(ins.ver))
+{
+  if (as.numeric(ins.ver[i,6])==1) #rigettate contro all
+  {
+    y_ver[i,1]=1
+  }
+}
+#calcolo le frequenze in base alle due classi sopra definite
+freq_rel_y=(table(y_ver)/nrow(datidef))[[1]] #num di oss in ins.ver di tipo -1
+
+pos =as.integer(freq_rel_y*length(prev_rig))
+tmp=sort(prev_rig, decreasing = TRUE)
+soglia_rig =tmp[pos]
+#0.16649
+
+
+
+prev_rig_2=matrix(-1,nrow=1,ncol=length(prev_rig))
+
+for(i in 1:ncol(prev_rig))
+{
+  if (prev_rig[1,i]>=soglia_rig)
+  {
+     prev_rig_2[1,i]=1
+     
+  }
+}
+
+
+tab_rig = tabella.sommario(prev_rig_2, y_ver)
+
+plot.roc(as.numeric(y_ver), as.numeric(prev_rig_2), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
+#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
+auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_rig_2))[1]
+auc.lineare
+
+
+
+##########################################################################
+#
+#
+#
+# CALCOLO FREQUENZE PAROLE IN OGGETTO
+#
+#
+#
+##########################################################################
+
+freq_obj=matrix(0,1,ncol=length(dictionary))
+freq_obj_tot=matrix(0,1,ncol=length(dictionary)) #matrice in cui salver? tutti i conteggi dei vari cicli
+for (i in 1:max_part)
+{
+  
+  if (i == 1)
+  {
+    min = 1
+    max = div
+  }
+  else
+  {
+    min = (i-1)*div+1
+    
+    if(min > nrow(ins.stima))
+      break
+    max = i*div
+    
+    if(max > nrow(ins.stima))
+      max = nrow(ins.stima)
+  }
+  print(min)
+  print(max)
+  objmat = svm_data(0, dictionary, min,max) #object
+                    
+  #aggiungo il contatore
+  if (nrow(matrice_svm)>1)
+  {
+    
+    freq_obj=colSums(objmat)
+    freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
+  } else
+  {
+    freq_obj=objmat
+    freq_obj_tot=freq_obj_tot+freq_obj #freq assolute
+  }
+}
+freq_obj_tot=freq_obj_tot/nrow(ins.stima) #freq relative sul training
+#uniamo le freq relative con la riga che conta il numero di colonne (ci serve per poi mettere il nome alle colonne)
+f_obj_t=order_freq(dictionary, freq_obj_tot)
+
+
+
+
 
 
 ####################
@@ -1291,17 +1407,15 @@ prev_rig = prediction(max_part, ins.ver, div, model_rig)
 #                       OBJ
 #######################################################################
 
-#matrice calcolata dentro al ciclo
-freq_obj_tot=order_freq(dictionary, freq_obj_tot)
 
-wf = data.frame(word=colnames(freq_obj_tot), freq=freq_obj_tot)
+wf = data.frame(word=colnames(f_obj_t), freq=f_obj_t[1,])
 p = ggplot(subset(wf, freq>50), aes(word, freq)) #???prendiamo quelle con freq>50
 p = p + geom_bar(stat="identity",color="darkblue", fill="lightblue")
 p = p + theme(axis.text.x=element_text(angle=45, hjust=1))
 
 #Word Cloud
 set.seed(123)
-wordcloud(colnames(freq_obj_tot), freq_obj_tot, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
+wordcloud(colnames(f_obj_t), f_obj_t, max.words=50,colors=brewer.pal(6,"Dark2"), random.order=TRUE)
 
 
 
@@ -1320,28 +1434,14 @@ wordcloud(colnames(freq_obj_tot), freq_obj_tot, max.words=50,colors=brewer.pal(6
 
 #MODELLO RIGETTATE VS ALL
 
-prev_rig = prediction(max_part, ins.ver, div, model_rig) #previsioni nell'ins.verifica
+
 #Devo rendere anche y in ins.ver binaria per i tre casi:
 
-y_ver<-matrix(-1,nrow=nrow(ins.ver),1)
-for (i in 1: nrow(ins.ver))
-{
-  if (as.numeric(ins.ver[i,6])==1) #rigettate contro all
-  {
-    y_ver[i,1]=1
-  }
-  
-}
-#tabella.sommario(previsioni >0, y_ver)
-tabella.sommario(prev_rig >0, y_ver)
+
+
+
 #restituisce matrice di confusione
 #disegno la curva ROC
-
-plot.roc(as.numeric(y_ver), as.numeric(prev_rig), auc = T, grid = T, legacy.axes=T,xlim=c(1,-1))
-#CALCOLARE L'AREA SOTTO LA CURVA ROC!!!
-auc.lineare <- auc(as.numeric(y_ver), as.numeric(prev_rig))[1]
-auc.lineare
-
 
 
 
